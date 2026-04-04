@@ -20,6 +20,7 @@ import TagPicker from '../ui/TagPicker'
 import PhotoGallery from './PhotoGallery'
 import AiBudgetEstimator from './AiBudgetEstimator'
 import RecurrencePanel from './RecurrencePanel'
+import SharePanel from './SharePanel'
 import { getProjectSuggestions } from '../../lib/anthropic'
 import { toast } from '../../stores/toastStore'
 import {
@@ -497,6 +498,12 @@ export default function ProjectDetail({ projectId, onClose }) {
                   </div>
                 </div>
               )}
+
+              {/* ── Sharing ── */}
+              <div>
+                <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">Shared With</p>
+                <SharePanel projectId={projectId} />
+              </div>
 
               {/* ── Timestamps ── */}
               <div className="text-[11px] text-text-muted space-y-0.5">
