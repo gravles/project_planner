@@ -91,7 +91,7 @@ export default function Vendors() {
   }
 
   return (
-    <AppShell onNewProject={() => {}} onAIAdd={() => {}}>
+    <AppShell>
       <div className="flex-1 overflow-hidden flex">
         {/* Left: vendor list */}
         <div className="w-72 shrink-0 border-r border-border overflow-y-auto scrollbar-thin p-4 space-y-1">

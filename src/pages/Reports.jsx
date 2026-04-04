@@ -79,7 +79,7 @@ export default function Reports() {
   }).reduce((s, e) => s + Number(e.amount_cad), 0)
 
   return (
-    <AppShell onNewProject={() => {}} onAIAdd={() => {}}>
+    <AppShell>
       <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between">

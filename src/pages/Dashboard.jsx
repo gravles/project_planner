@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import AppShell from '../components/layout/AppShell'
-import { useProjects, useCreateProject } from '../hooks/useProjects'
+import { useProjects } from '../hooks/useProjects'
 import { useProperties } from '../hooks/useProperties'
 import { generateWeeklySummary } from '../lib/anthropic'
 import { cn, STATUS_COLORS, PROPERTY_COLORS } from '../lib/utils'
-import NewProjectModal from '../components/projects/NewProjectModal'
-import AIAddModal from '../components/projects/AIAddModal'
 
 function StatCard({ label, value, sub, accent = false }) {
   return (
@@ -39,10 +37,6 @@ const CUSTOM_TOOLTIP = ({ active, payload, label }) => {
 export default function Dashboard() {
   const { data: projects = [], isLoading } = useProjects()
   const { data: properties = [] } = useProperties()
-  const createProject = useCreateProject()
-
-  const [newOpen, setNewOpen] = useState(false)
-  const [aiOpen, setAiOpen] = useState(false)
   const [summary, setSummary] = useState(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
 
@@ -101,7 +95,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <AppShell onNewProject={() => setNewOpen(true)} onAIAdd={() => setAiOpen(true)}>
+      <AppShell>
         <div className="flex items-center justify-center h-full">
           <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
@@ -110,7 +104,7 @@ export default function Dashboard() {
   }
 
   return (
-    <AppShell onNewProject={() => setNewOpen(true)} onAIAdd={() => setAiOpen(true)}>
+    <AppShell>
       <div className="px-6 py-6 max-w-5xl space-y-6 overflow-y-auto flex-1 scrollbar-thin">
 
         {/* ── Stats row ── */}
@@ -214,8 +208,6 @@ export default function Dashboard() {
 
       </div>
 
-      <NewProjectModal open={newOpen} onClose={() => setNewOpen(false)} onCreate={async d => { await createProject.mutateAsync(d); setNewOpen(false) }} />
-      <AIAddModal open={aiOpen} onClose={() => setAiOpen(false)} onCreate={async d => { await createProject.mutateAsync(d); setAiOpen(false) }} />
     </AppShell>
   )
 }

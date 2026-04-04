@@ -470,7 +470,7 @@ export default function Admin() {
   const [tab, setTab] = useState('Properties')
 
   return (
-    <AppShell onNewProject={() => {}} onAIAdd={() => {}}>
+    <AppShell>
       <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-6 max-w-2xl">
         <div className="mb-6">
           <h1 className="font-display text-2xl font-bold text-text-primary">Settings</h1>
