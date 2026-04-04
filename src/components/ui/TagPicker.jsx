@@ -8,7 +8,8 @@ import { cn } from '../../lib/utils'
  *   onChange        (ids: string[]) => void
  *   compact         bool  — smaller pills, for use on cards / filter bar
  */
-export default function TagPicker({ selectedTagIds = [], onChange, compact = false }) {
+export default function TagPicker({ selectedIds = [], onChange, compact = false }) {
+  const selectedTagIds = selectedIds
   const { data: tags = [] } = useTags()
   if (tags.length === 0) return null
 
