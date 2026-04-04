@@ -12,7 +12,7 @@ export default function AppShell({ children, onNewProject, onAIAdd }) {
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onNewProject={onNewProject} onAIAdd={onAIAdd} />
 
-        <main className="flex-1 overflow-y-auto scrollbar-thin">
+        <main className="flex-1 overflow-hidden flex flex-col">
           {children}
         </main>
       </div>
