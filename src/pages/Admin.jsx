@@ -6,6 +6,7 @@ import {
   useRoomTypes, useCreateRoomType, useDeleteRoomType, useUpdateRoomType,
   useTags, useCreateTag, useUpdateTag, useDeleteTag,
 } from '../hooks/useAdmin'
+import TemplatesSection from '../components/admin/TemplatesSection'
 import { cn } from '../lib/utils'
 
 const PRESET_COLORS = [
@@ -463,7 +464,7 @@ function TagsSection() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const TABS = ['Properties', 'Rooms', 'Tags']
+const TABS = ['Properties', 'Rooms', 'Tags', 'Templates']
 
 export default function Admin() {
   const [tab, setTab] = useState('Properties')
@@ -473,7 +474,7 @@ export default function Admin() {
       <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-6 max-w-2xl">
         <div className="mb-6">
           <h1 className="font-display text-2xl font-bold text-text-primary">Settings</h1>
-          <p className="text-sm text-text-muted mt-1">Manage properties, room types, and tags.</p>
+          <p className="text-sm text-text-muted mt-1">Manage properties, room types, tags, and templates.</p>
         </div>
 
         {/* Tabs */}
@@ -497,6 +498,15 @@ export default function Admin() {
         {tab === 'Properties' && <PropertiesSection />}
         {tab === 'Rooms' && <RoomsSection />}
         {tab === 'Tags' && <TagsSection />}
+        {tab === 'Templates' && (
+          <div>
+            <SectionHeader
+              title="Templates"
+              subtitle="Reusable project templates. Create one by opening a project and clicking 'Save as template'."
+            />
+            <TemplatesSection />
+          </div>
+        )}
       </div>
     </AppShell>
   )

@@ -4,6 +4,7 @@ import { useProperties } from '../../hooks/useProperties'
 import { useRoomTypes, useCreateRoomType } from '../../hooks/useAdmin'
 import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../../lib/utils'
 import Combobox from '../ui/Combobox'
+import TagPicker from '../ui/TagPicker'
 
 const DEFAULT_FORM = {
   title: '',
@@ -23,6 +24,7 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
   const createRoomType = useCreateRoomType()
   const [form, setForm] = useState(() => ({ ...DEFAULT_FORM, ...initialData }))
   const [subtasks, setSubtasks] = useState(initialData?.subtasks ?? [])
+  const [tagIds, setTagIds] = useState([])
   const [newSubtask, setNewSubtask] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -58,6 +60,7 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
           notes: form.notes?.trim() || null,
         },
         subtasks: subtasks.filter(s => s.text?.trim()),
+        tagIds,
       })
       handleClose()
     } finally {
@@ -68,6 +71,7 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
   function handleClose() {
     setForm({ ...DEFAULT_FORM })
     setSubtasks([])
+    setTagIds([])
     setNewSubtask('')
     onClose()
   }
@@ -170,6 +174,12 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
                 <div>
                   <label className="block text-xs text-text-muted mb-1.5">Vendor / Contractor</label>
                   <input type="text" value={form.vendor} onChange={e => set('vendor', e.target.value)} placeholder="e.g. Home Depot, John's Plumbing" className={inputCls} />
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-xs text-text-muted mb-1.5">Tags</label>
+                  <TagPicker selectedIds={tagIds} onChange={setTagIds} />
                 </div>
 
                 {/* Notes */}

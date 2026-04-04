@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { toast } from '../stores/toastStore'
 
 // ── Projects ─────────────────────────────────────────────────────────────────
 
@@ -9,7 +10,14 @@ export function useProjects(propertyName = null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('*, properties(id, name, color, icon), subtasks(id, done), spend_entries(amount_cad)')
+        .select(`
+          *,
+          properties(id, name, color, icon),
+          subtasks(id, done),
+          spend_entries(amount_cad),
+          project_tags(tag_id, tags(id, name, color))
+        `)
+        .eq('is_template', false)
         .order('position', { ascending: true })
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -26,13 +34,22 @@ export function useProject(id) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('*, properties(*), subtasks(*), spend_entries(*), activity_log(*)')
+        .select(`
+          *,
+          properties(*),
+          subtasks(*),
+          spend_entries(*),
+          activity_log(*),
+          project_tags(tag_id, tags(*)),
+          project_photos(*)
+        `)
         .eq('id', id)
         .single()
       if (error) throw error
       data.subtasks?.sort((a, b) => a.position - b.position || new Date(a.created_at) - new Date(b.created_at))
       data.spend_entries?.sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date))
       data.activity_log?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      data.project_photos?.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
       return data
     },
   })
@@ -41,7 +58,7 @@ export function useProject(id) {
 export function useCreateProject() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ project, subtasks = [] }) => {
+    mutationFn: async ({ project, subtasks = [], tagIds = [] }) => {
       const { data, error } = await supabase.from('projects').insert(project).select().single()
       if (error) throw error
       if (subtasks.length > 0) {
@@ -50,9 +67,16 @@ export function useCreateProject() {
           .insert(subtasks.map((t, i) => ({ project_id: data.id, text: t.text, position: i })))
         if (stErr) throw stErr
       }
+      if (tagIds.length > 0) {
+        await supabase.from('project_tags').insert(tagIds.map(tid => ({ project_id: data.id, tag_id: tid })))
+      }
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+    onSuccess: () => {
+      toast.success('Project created')
+      qc.invalidateQueries({ queryKey: ['projects'] })
+    },
+    onError: (e) => toast.error(e.message ?? 'Failed to create project'),
   })
 }
 
@@ -67,6 +91,7 @@ export function useUpdateProject() {
       qc.invalidateQueries({ queryKey: ['projects'] })
       qc.invalidateQueries({ queryKey: ['project', id] })
     },
+    onError: (e) => toast.error(e.message ?? 'Failed to update project'),
   })
 }
 
@@ -77,7 +102,32 @@ export function useDeleteProject() {
       const { error } = await supabase.from('projects').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+    onSuccess: () => {
+      toast.success('Project deleted')
+      qc.invalidateQueries({ queryKey: ['projects'] })
+    },
+    onError: (e) => toast.error(e.message ?? 'Failed to delete project'),
+  })
+}
+
+// ── Project Tags ──────────────────────────────────────────────────────────────
+
+export function useUpdateProjectTags() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, tagIds }) => {
+      await supabase.from('project_tags').delete().eq('project_id', projectId)
+      if (tagIds.length > 0) {
+        const { error } = await supabase
+          .from('project_tags')
+          .insert(tagIds.map(tid => ({ project_id: projectId, tag_id: tid })))
+        if (error) throw error
+      }
+    },
+    onSuccess: (_, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+    },
   })
 }
 
@@ -106,8 +156,8 @@ export function useToggleSubtask() {
       const { error } = await supabase.from('subtasks').update({ done }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: (_, vars, ctx) => {
-      qc.invalidateQueries({ queryKey: ['project', vars.projectId] })
+    onSuccess: (_, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
       qc.invalidateQueries({ queryKey: ['projects'] })
     },
   })
@@ -139,9 +189,11 @@ export function useAddSpend() {
       if (error) throw error
     },
     onSuccess: (_, { projectId }) => {
+      toast.success('Spend entry added')
       qc.invalidateQueries({ queryKey: ['project', projectId] })
       qc.invalidateQueries({ queryKey: ['projects'] })
     },
+    onError: (e) => toast.error(e.message ?? 'Failed to add spend entry'),
   })
 }
 
@@ -153,6 +205,7 @@ export function useDeleteSpend() {
       if (error) throw error
     },
     onSuccess: (_, { projectId }) => {
+      toast.success('Entry deleted')
       qc.invalidateQueries({ queryKey: ['project', projectId] })
       qc.invalidateQueries({ queryKey: ['projects'] })
     },

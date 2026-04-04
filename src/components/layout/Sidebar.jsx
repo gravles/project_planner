@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import { useUIStore } from '../../stores/uiStore'
+import { useProperties } from '../../hooks/useProperties'
 import { cn } from '../../lib/utils'
 
 const NAV = [
@@ -14,7 +15,6 @@ const NAV = [
         <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
       </svg>
     ),
-    shortcut: 'D',
   },
   {
     label: 'Projects',
@@ -24,19 +24,33 @@ const NAV = [
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
       </svg>
     ),
-    shortcut: 'B',
   },
-]
-
-const PROPERTIES = [
-  { label: 'King George', color: '#818cf8', key: 'King George' },
-  { label: 'Coach House', color: '#34d399', key: 'Coach House' },
-  { label: 'Olmstead', color: '#fb923c', key: 'Olmstead' },
+  {
+    label: 'Vendors',
+    to: '/vendors',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Reports',
+    to: '/reports',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" />
+      </svg>
+    ),
+  },
 ]
 
 export default function Sidebar({ open }) {
   const navigate = useNavigate()
   const { activeProperty, setActiveProperty } = useUIStore()
+  const { data: properties = [] } = useProperties()
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -84,29 +98,33 @@ export default function Sidebar({ open }) {
             ))}
 
             {/* Properties */}
-            <div className="mt-5 mb-2 px-3">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-                Properties
-              </p>
-            </div>
-            {PROPERTIES.map(prop => (
-              <button
-                key={prop.key}
-                onClick={() => setActiveProperty(activeProperty === prop.key ? null : prop.key)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                  activeProperty === prop.key
-                    ? 'bg-bg-elevated text-text-primary'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                )}
-              >
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: prop.color }}
-                />
-                {prop.label}
-              </button>
-            ))}
+            {properties.length > 0 && (
+              <>
+                <div className="mt-5 mb-2 px-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+                    Properties
+                  </p>
+                </div>
+                {properties.map(prop => (
+                  <button
+                    key={prop.id}
+                    onClick={() => setActiveProperty(activeProperty === prop.name ? null : prop.name)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                      activeProperty === prop.name
+                        ? 'bg-bg-elevated text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                    )}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: prop.color }}
+                    />
+                    {prop.name}
+                  </button>
+                ))}
+              </>
+            )}
           </nav>
 
           {/* Footer / sign out */}

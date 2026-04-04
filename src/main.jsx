@@ -8,6 +8,9 @@ import Login from './pages/Login'
 import Projects from './pages/Projects'
 import Dashboard from './pages/Dashboard'
 import Admin from './pages/Admin'
+import Vendors from './pages/Vendors'
+import Reports from './pages/Reports'
+import Toast from './components/ui/Toast'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,8 +51,25 @@ createRoot(document.getElementById('root')).render(
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/vendors"
+            element={
+              <ProtectedRoute>
+                <Vendors />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Toast />
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>

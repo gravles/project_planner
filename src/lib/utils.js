@@ -39,6 +39,14 @@ export const PRIORITY_COLORS = {
   Urgent: 'text-danger',
 }
 
+export function groupBy(arr, fn) {
+  return arr.reduce((acc, item) => {
+    const key = fn(item)
+    ;(acc[key] = acc[key] ?? []).push(item)
+    return acc
+  }, {})
+}
+
 export const STATUS_COLORS = {
   Backlog: 'bg-text-muted/20 text-text-secondary',
   'In Progress': 'bg-info/20 text-info',

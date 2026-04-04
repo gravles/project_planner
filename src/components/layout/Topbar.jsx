@@ -1,12 +1,22 @@
 import { useUIStore } from '../../stores/uiStore'
+import SearchBar from './SearchBar'
 
 const VIEW_TABS = [
   { key: 'board', label: 'Board', shortcut: 'B' },
   { key: 'list', label: 'List', shortcut: 'L' },
+  { key: 'calendar', label: 'Cal', shortcut: 'C' },
 ]
 
 export default function Topbar({ onNewProject, onAIAdd }) {
-  const { sidebarOpen, toggleSidebar, viewMode, setViewMode } = useUIStore()
+  const { sidebarOpen, toggleSidebar, viewMode, setViewMode, filterBarOpen, toggleFilterBar, activeFilters } = useUIStore()
+
+  const filterCount = [
+    ...(activeFilters?.statuses ?? []),
+    ...(activeFilters?.priorities ?? []),
+    ...(activeFilters?.tagIds ?? []),
+    activeFilters?.overdue ? ['o'] : [],
+    activeFilters?.hideDone ? ['h'] : [],
+  ].flat().length
 
   return (
     <header className="h-14 shrink-0 bg-bg-surface border-b border-border flex items-center px-4 gap-4">
@@ -40,7 +50,29 @@ export default function Topbar({ onNewProject, onAIAdd }) {
         ))}
       </div>
 
+      {/* Filter toggle */}
+      <button
+        onClick={toggleFilterBar}
+        className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          filterBarOpen
+            ? 'bg-accent/10 text-accent'
+            : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated'
+        }`}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+        </svg>
+        Filters
+        {filterCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent text-bg-base text-[10px] font-bold rounded-full flex items-center justify-center">
+            {filterCount}
+          </span>
+        )}
+      </button>
+
       <div className="flex-1" />
+
+      <SearchBar />
 
       {/* Actions */}
       <button

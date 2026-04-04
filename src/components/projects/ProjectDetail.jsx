@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import {
   useProject,
   useUpdateProject,
+  useUpdateProjectTags,
   useDeleteProject,
   useAddSubtask,
   useToggleSubtask,
@@ -11,10 +12,16 @@ import {
   useAddSpend,
   useDeleteSpend,
 } from '../../hooks/useProjects'
+import { useSaveAsTemplate } from '../../hooks/useTemplates'
 import { useProperties } from '../../hooks/useProperties'
 import { useRoomTypes, useCreateRoomType } from '../../hooks/useAdmin'
 import Combobox from '../ui/Combobox'
+import TagPicker from '../ui/TagPicker'
+import PhotoGallery from './PhotoGallery'
+import AiBudgetEstimator from './AiBudgetEstimator'
+import RecurrencePanel from './RecurrencePanel'
 import { getProjectSuggestions } from '../../lib/anthropic'
+import { toast } from '../../stores/toastStore'
 import {
   cn,
   formatDate,
@@ -75,6 +82,8 @@ export default function ProjectDetail({ projectId, onClose }) {
   const { data: roomTypes = [] } = useRoomTypes()
   const createRoomType = useCreateRoomType()
   const updateProject = useUpdateProject()
+  const updateProjectTags = useUpdateProjectTags()
+  const saveAsTemplate = useSaveAsTemplate()
   const deleteProject = useDeleteProject()
   const addSubtask = useAddSubtask()
   const toggleSubtask = useToggleSubtask()
@@ -266,6 +275,17 @@ export default function ProjectDetail({ projectId, onClose }) {
                 />
               </Field>
 
+              {/* Tags */}
+              <Field label="Tags">
+                <TagPicker
+                  selectedIds={(project.project_tags ?? []).map(pt => pt.tag_id)}
+                  onChange={ids => updateProjectTags.mutate({ projectId, tagIds: ids })}
+                />
+              </Field>
+
+              {/* ── AI Budget Estimator ── */}
+              <AiBudgetEstimator projectId={projectId} projectTitle={project.title} />
+
               {/* ── Budget summary ── */}
               {estimate > 0 && (
                 <div className="bg-bg-elevated rounded-xl px-4 py-3 flex items-center justify-between">
@@ -410,6 +430,21 @@ export default function ProjectDetail({ projectId, onClose }) {
                 </div>
               </div>
 
+              {/* ── Photos ── */}
+              <div>
+                <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">Photos</p>
+                <PhotoGallery projectId={projectId} />
+              </div>
+
+              {/* ── Recurrence ── */}
+              <div>
+                <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Recurrence</p>
+                <RecurrencePanel
+                  project={project}
+                  onSave={v => updateProject.mutate({ id: projectId, recurrence: v })}
+                />
+              </div>
+
               {/* ── AI Suggestions ── */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -463,8 +498,27 @@ export default function ProjectDetail({ projectId, onClose }) {
                 </div>
               )}
 
+              {/* ── Timestamps ── */}
+              <div className="text-[11px] text-text-muted space-y-0.5">
+                {project.created_at && <p>Created {timeAgo(project.created_at)}</p>}
+                {project.updated_at && project.updated_at !== project.created_at && (
+                  <p>Updated {timeAgo(project.updated_at)}</p>
+                )}
+              </div>
+
               {/* ── Danger zone ── */}
-              <div className="pt-2 pb-4 border-t border-border/50">
+              <div className="pt-2 pb-4 border-t border-border/50 flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={async () => {
+                    await saveAsTemplate.mutateAsync(project)
+                    toast.success('Saved as template')
+                  }}
+                  disabled={saveAsTemplate.isPending}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-border text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Save as template
+                </button>
+                <div className="flex-1" />
                 <button
                   onClick={handleDelete}
                   className={cn(
@@ -479,7 +533,7 @@ export default function ProjectDetail({ projectId, onClose }) {
                 {confirmDelete && (
                   <button
                     onClick={() => setConfirmDelete(false)}
-                    className="ml-2 text-xs text-text-muted hover:text-text-secondary transition-colors"
+                    className="text-xs text-text-muted hover:text-text-secondary transition-colors"
                   >
                     Cancel
                   </button>

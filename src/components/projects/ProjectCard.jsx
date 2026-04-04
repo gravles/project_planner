@@ -1,6 +1,7 @@
 import { cn, formatDate, isOverdue, PRIORITY_COLORS } from '../../lib/utils'
 
 export default function ProjectCard({ project, onOpen, isDragging = false }) {
+  const tags = project.project_tags?.map(pt => pt.tags).filter(Boolean) ?? []
   const subtaskTotal = project.subtasks?.length ?? 0
   const subtaskDone = project.subtasks?.filter(s => s.done).length ?? 0
   const spent = project.spend_entries?.reduce((s, e) => s + Number(e.amount_cad), 0) ?? 0
@@ -43,6 +44,15 @@ export default function ProjectCard({ project, onOpen, isDragging = false }) {
             {project.vendor}
           </span>
         )}
+        {tags.map(tag => (
+          <span
+            key={tag.id}
+            className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+            style={{ backgroundColor: tag.color + '22', color: tag.color }}
+          >
+            {tag.name}
+          </span>
+        ))}
       </div>
 
       {/* Footer */}
