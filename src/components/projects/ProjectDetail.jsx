@@ -12,6 +12,8 @@ import {
   useDeleteSpend,
 } from '../../hooks/useProjects'
 import { useProperties } from '../../hooks/useProperties'
+import { useRoomTypes, useCreateRoomType } from '../../hooks/useAdmin'
+import Combobox from '../ui/Combobox'
 import { getProjectSuggestions } from '../../lib/anthropic'
 import {
   cn,
@@ -19,7 +21,6 @@ import {
   timeAgo,
   STATUS_OPTIONS,
   PRIORITY_OPTIONS,
-  ROOM_OPTIONS,
   STATUS_COLORS,
   PRIORITY_COLORS,
 } from '../../lib/utils'
@@ -71,6 +72,8 @@ function InlineTextarea({ value, onBlurSave, placeholder, rows = 3 }) {
 export default function ProjectDetail({ projectId, onClose }) {
   const { data: project, isLoading } = useProject(projectId)
   const { data: properties = [] } = useProperties()
+  const { data: roomTypes = [] } = useRoomTypes()
+  const createRoomType = useCreateRoomType()
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()
   const addSubtask = useAddSubtask()
@@ -222,13 +225,13 @@ export default function ProjectDetail({ projectId, onClose }) {
               {/* Details grid */}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Room">
-                  <select
+                  <Combobox
                     value={project.room}
-                    onChange={e => saveSelect('room', e.target.value)}
-                    className="w-full bg-bg-elevated border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
-                  >
-                    {ROOM_OPTIONS.map(r => <option key={r}>{r}</option>)}
-                  </select>
+                    onChange={v => saveSelect('room', v)}
+                    options={roomTypes.map(r => r.name)}
+                    onCreate={name => createRoomType.mutateAsync(name)}
+                    placeholder="Select room…"
+                  />
                 </Field>
                 <Field label="Due Date">
                   <InlineInput

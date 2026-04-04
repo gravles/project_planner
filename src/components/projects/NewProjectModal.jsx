@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProperties } from '../../hooks/useProperties'
-import { ROOM_OPTIONS, STATUS_OPTIONS, PRIORITY_OPTIONS } from '../../lib/utils'
+import { useRoomTypes, useCreateRoomType } from '../../hooks/useAdmin'
+import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../../lib/utils'
+import Combobox from '../ui/Combobox'
 
 const DEFAULT_FORM = {
   title: '',
@@ -17,6 +19,8 @@ const DEFAULT_FORM = {
 
 export default function NewProjectModal({ open, onClose, onCreate, initialData = null }) {
   const { data: properties = [] } = useProperties()
+  const { data: roomTypes = [] } = useRoomTypes()
+  const createRoomType = useCreateRoomType()
   const [form, setForm] = useState(() => ({ ...DEFAULT_FORM, ...initialData }))
   const [subtasks, setSubtasks] = useState(initialData?.subtasks ?? [])
   const [newSubtask, setNewSubtask] = useState('')
@@ -124,9 +128,13 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
                   </div>
                   <div>
                     <label className="block text-xs text-text-muted mb-1.5">Room</label>
-                    <select value={form.room} onChange={e => set('room', e.target.value)} className={inputCls}>
-                      {ROOM_OPTIONS.map(r => <option key={r}>{r}</option>)}
-                    </select>
+                    <Combobox
+                      value={form.room}
+                      onChange={v => set('room', v)}
+                      options={roomTypes.map(r => r.name)}
+                      onCreate={name => createRoomType.mutateAsync(name)}
+                      placeholder="Select room…"
+                    />
                   </div>
                 </div>
 
