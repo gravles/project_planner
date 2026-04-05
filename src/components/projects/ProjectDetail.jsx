@@ -19,6 +19,7 @@ import Combobox from '../ui/Combobox'
 import TagPicker from '../ui/TagPicker'
 import PhotoGallery from './PhotoGallery'
 import AiBudgetEstimator from './AiBudgetEstimator'
+import AiTimeEstimator from './AiTimeEstimator'
 import RecurrencePanel from './RecurrencePanel'
 import SharePanel from './SharePanel'
 import { getProjectSuggestions, parseReceiptImage } from '../../lib/anthropic'
@@ -32,6 +33,13 @@ import {
   STATUS_COLORS,
   PRIORITY_COLORS,
 } from '../../lib/utils'
+
+function formatHours(h) {
+  const n = Number(h)
+  if (n < 1) return `${Math.round(n * 60)} min`
+  if (n % 1 === 0) return `${n}h`
+  return `${n}h`
+}
 
 function Field({ label, children }) {
   return (
@@ -313,19 +321,30 @@ export default function ProjectDetail({ projectId, onClose }) {
                 />
               </Field>
 
-              {/* ── AI Budget Estimator ── */}
+              {/* ── AI Estimators ── */}
               <AiBudgetEstimator projectId={projectId} projectTitle={project.title} />
+              <AiTimeEstimator projectId={projectId} projectTitle={project.title} />
 
-              {/* ── Budget summary ── */}
-              {estimate > 0 && (
-                <div className="bg-bg-elevated rounded-xl px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">Budget</p>
-                    <p className={cn('text-lg font-bold font-display', spent > estimate ? 'text-danger' : 'text-text-primary')}>
-                      ${spent.toLocaleString()} <span className="text-sm font-normal text-text-muted">/ ${estimate.toLocaleString()}</span>
-                    </p>
-                  </div>
+              {/* ── Budget + Time summary ── */}
+              {(estimate > 0 || project.time_estimate_hours) && (
+                <div className="bg-bg-elevated rounded-xl px-4 py-3 flex items-center justify-between gap-4">
                   {estimate > 0 && (
+                    <div>
+                      <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">Budget</p>
+                      <p className={cn('text-lg font-bold font-display', spent > estimate ? 'text-danger' : 'text-text-primary')}>
+                        ${spent.toLocaleString()} <span className="text-sm font-normal text-text-muted">/ ${estimate.toLocaleString()}</span>
+                      </p>
+                    </div>
+                  )}
+                  {project.time_estimate_hours && (
+                    <div className={estimate > 0 ? 'text-right' : ''}>
+                      <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">Est. Time</p>
+                      <p className="text-lg font-bold font-display text-text-primary">
+                        {formatHours(project.time_estimate_hours)}
+                      </p>
+                    </div>
+                  )}
+                  {estimate > 0 && !project.time_estimate_hours && (
                     <div className="text-right">
                       <p className="text-[11px] text-text-muted mb-1">
                         {spent > estimate ? 'Over by' : 'Remaining'}

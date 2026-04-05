@@ -87,6 +87,29 @@ Be realistic. Include labour if contractor work. JSON only.`,
   return JSON.parse(raw.replace(/```json|```/g, '').trim())
 }
 
+export async function estimateTime(description) {
+  const res = await fetch(ANTHROPIC_API, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 600,
+      system: `You are a home renovation time estimator for a DIY/contractor context in Ottawa, Canada. Given a project description, estimate how long it will take. Return ONLY a valid JSON object:
+{
+  "total_hours": number,
+  "breakdown": [{ "task": string, "hours": number }],
+  "diy_vs_contractor": "DIY" | "Contractor" | "Either",
+  "notes": string (brief caveats, permit warnings, or tips — max 80 chars)
+}
+Be realistic — include prep, cleanup, and drying/curing time where relevant. JSON only.`,
+      messages: [{ role: 'user', content: description }],
+    }),
+  })
+  const data = await res.json()
+  const raw = data.content?.find(b => b.type === 'text')?.text || '{}'
+  return JSON.parse(raw.replace(/```json|```/g, '').trim())
+}
+
 export async function parseReceiptImage(base64Data, mimeType = 'image/jpeg') {
   const res = await fetch(ANTHROPIC_API, {
     method: 'POST',
