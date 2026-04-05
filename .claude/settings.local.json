@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npm run:*)",
       "Bash(npx vite:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "WebSearch",
+      "WebFetch(domain:support.claude.com)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('deps:', JSON.stringify\\(d.dependencies, null, 2\\)\\)\")",
+      "Bash(node -e \"const d=require\\('./node_modules/@modelcontextprotocol/sdk/package.json'\\); console.log\\(JSON.stringify\\(d.dependencies,null,2\\)\\)\")",
+      "Bash(findstr \"zod\")"
     ]
   }
 }
