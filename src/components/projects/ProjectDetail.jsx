@@ -8,6 +8,7 @@ import {
   useDeleteProject,
   useAddSubtask,
   useToggleSubtask,
+  useUpdateSubtask,
   useDeleteSubtask,
   useAddSpend,
   useDeleteSpend,
@@ -70,6 +71,23 @@ function InlineInput({ value, onBlurSave, type = 'text', placeholder, className 
   )
 }
 
+function SubtaskTimeInput({ value, onSave }) {
+  const [local, setLocal] = useState(value != null ? String(value) : '')
+  useEffect(() => setLocal(value != null ? String(value) : ''), [value])
+  return (
+    <input
+      type="number"
+      min="0"
+      step="0.5"
+      value={local}
+      onChange={e => setLocal(e.target.value)}
+      onBlur={() => onSave(local ? Number(local) : null)}
+      placeholder="—"
+      className="w-14 bg-bg-base border border-border rounded px-2 py-0.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+    />
+  )
+}
+
 function InlineTextarea({ value, onBlurSave, placeholder, rows = 3 }) {
   const [local, setLocal] = useState(value ?? '')
   useEffect(() => setLocal(value ?? ''), [value])
@@ -96,6 +114,7 @@ export default function ProjectDetail({ projectId, onClose }) {
   const deleteProject = useDeleteProject()
   const addSubtask = useAddSubtask()
   const toggleSubtask = useToggleSubtask()
+  const updateSubtask = useUpdateSubtask()
   const deleteSubtask = useDeleteSubtask()
   const addSpend = useAddSpend()
   const deleteSpend = useDeleteSpend()
@@ -302,6 +321,22 @@ export default function ProjectDetail({ projectId, onClose }) {
                     placeholder="—"
                   />
                 </Field>
+                <Field label="Est. Time (hrs)">
+                  <InlineInput
+                    type="number"
+                    value={project.time_estimate_hours ? String(project.time_estimate_hours) : ''}
+                    onBlurSave={v => updateProject.mutate({ id: projectId, time_estimate_hours: v ? Number(v) : null })}
+                    placeholder="0"
+                  />
+                </Field>
+                <Field label="Actual Time (hrs)">
+                  <InlineInput
+                    type="number"
+                    value={project.time_actual_hours ? String(project.time_actual_hours) : ''}
+                    onBlurSave={v => updateProject.mutate({ id: projectId, time_actual_hours: v ? Number(v) : null })}
+                    placeholder="0"
+                  />
+                </Field>
               </div>
 
               <Field label="Notes">
@@ -326,8 +361,8 @@ export default function ProjectDetail({ projectId, onClose }) {
               <AiTimeEstimator projectId={projectId} projectTitle={project.title} />
 
               {/* ── Budget + Time summary ── */}
-              {(estimate > 0 || project.time_estimate_hours) && (
-                <div className="bg-bg-elevated rounded-xl px-4 py-3 flex items-center justify-between gap-4">
+              {(estimate > 0 || project.time_estimate_hours || project.time_actual_hours) && (
+                <div className="bg-bg-elevated rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
                   {estimate > 0 && (
                     <div>
                       <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">Budget</p>
@@ -336,21 +371,27 @@ export default function ProjectDetail({ projectId, onClose }) {
                       </p>
                     </div>
                   )}
-                  {project.time_estimate_hours && (
-                    <div className={estimate > 0 ? 'text-right' : ''}>
-                      <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">Est. Time</p>
-                      <p className="text-lg font-bold font-display text-text-primary">
-                        {formatHours(project.time_estimate_hours)}
-                      </p>
-                    </div>
-                  )}
-                  {estimate > 0 && !project.time_estimate_hours && (
+                  {estimate > 0 && !project.time_estimate_hours && !project.time_actual_hours && (
                     <div className="text-right">
                       <p className="text-[11px] text-text-muted mb-1">
                         {spent > estimate ? 'Over by' : 'Remaining'}
                       </p>
                       <p className={cn('text-sm font-semibold', spent > estimate ? 'text-danger' : 'text-success')}>
                         ${Math.abs(estimate - spent).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                  {(project.time_estimate_hours || project.time_actual_hours) && (
+                    <div className={estimate > 0 ? 'text-right' : ''}>
+                      <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">Time</p>
+                      <p className="text-lg font-bold font-display text-text-primary">
+                        {project.time_actual_hours
+                          ? <>{formatHours(project.time_actual_hours)} <span className="text-sm font-normal text-text-muted">actual</span></>
+                          : formatHours(project.time_estimate_hours)
+                        }
+                        {project.time_estimate_hours && project.time_actual_hours && (
+                          <span className="text-sm font-normal text-text-muted"> / {formatHours(project.time_estimate_hours)} est</span>
+                        )}
                       </p>
                     </div>
                   )}
@@ -366,31 +407,53 @@ export default function ProjectDetail({ projectId, onClose }) {
                 </div>
                 <div className="space-y-1 mb-2">
                   {project.subtasks?.map(task => (
-                    <div key={task.id} className="flex items-center gap-2.5 group/task py-1">
-                      <button
-                        onClick={() => toggleSubtask.mutate({ id: task.id, done: !task.done, projectId })}
-                        className={cn(
-                          'w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors',
-                          task.done
-                            ? 'bg-success border-success text-bg-base'
-                            : 'border-border-hover hover:border-accent',
+                    <div key={task.id} className="group/task">
+                      <div className="flex items-center gap-2.5 py-1">
+                        <button
+                          onClick={() => toggleSubtask.mutate({ id: task.id, done: !task.done, projectId })}
+                          className={cn(
+                            'w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors',
+                            task.done
+                              ? 'bg-success border-success text-bg-base'
+                              : 'border-border-hover hover:border-accent',
+                          )}
+                        >
+                          {task.done && (
+                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="1 6 4.5 9.5 11 2.5" />
+                            </svg>
+                          )}
+                        </button>
+                        <span className={cn('flex-1 text-sm', task.done ? 'text-text-muted line-through' : 'text-text-secondary')}>
+                          {task.text}
+                        </span>
+                        {(task.time_estimate_hours || task.time_actual_hours) && (
+                          <span className="text-[11px] text-text-muted shrink-0">
+                            {task.time_actual_hours
+                              ? <>{formatHours(task.time_actual_hours)}{task.time_estimate_hours ? ` / ${formatHours(task.time_estimate_hours)}` : ''}</>
+                              : formatHours(task.time_estimate_hours)
+                            }
+                          </span>
                         )}
-                      >
-                        {task.done && (
-                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="1 6 4.5 9.5 11 2.5" />
-                          </svg>
-                        )}
-                      </button>
-                      <span className={cn('flex-1 text-sm', task.done ? 'text-text-muted line-through' : 'text-text-secondary')}>
-                        {task.text}
-                      </span>
-                      <button
-                        onClick={() => deleteSubtask.mutate({ id: task.id, projectId })}
-                        className="opacity-0 group-hover/task:opacity-100 text-text-muted hover:text-danger transition-all text-xs px-1"
-                      >
-                        ✕
-                      </button>
+                        <button
+                          onClick={() => deleteSubtask.mutate({ id: task.id, projectId })}
+                          className="opacity-0 group-hover/task:opacity-100 text-text-muted hover:text-danger transition-all text-xs px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="hidden group-hover/task:flex items-center gap-3 pb-1.5 pl-7">
+                        <label className="text-[10px] text-text-muted whitespace-nowrap">Est h</label>
+                        <SubtaskTimeInput
+                          value={task.time_estimate_hours}
+                          onSave={v => updateSubtask.mutate({ id: task.id, projectId, time_estimate_hours: v })}
+                        />
+                        <label className="text-[10px] text-text-muted whitespace-nowrap">Actual h</label>
+                        <SubtaskTimeInput
+                          value={task.time_actual_hours}
+                          onSave={v => updateSubtask.mutate({ id: task.id, projectId, time_actual_hours: v })}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

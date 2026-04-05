@@ -163,6 +163,20 @@ export function useToggleSubtask() {
   })
 }
 
+export function useUpdateSubtask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...fields }) => {
+      const { error } = await supabase.from('subtasks').update(fields).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+    },
+  })
+}
+
 export function useDeleteSubtask() {
   const qc = useQueryClient()
   return useMutation({
