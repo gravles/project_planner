@@ -1,6 +1,6 @@
 // GET  /oauth/authorize — show approval page
 // POST /oauth/authorize — issue auth code and redirect
-import { getSupabase, randomToken, json, oauthError, ISSUER } from '../_lib/oauth.js'
+import { getSupabase, randomToken, json, oauthError, handleOptions, cors, ISSUER } from '../_lib/oauth.js'
 
 function authPage(params) {
   const qs = new URLSearchParams(params).toString()
@@ -39,6 +39,7 @@ function authPage(params) {
 }
 
 export default async function handler(req, res) {
+  if (handleOptions(req, res)) return
   const sb = getSupabase()
 
   // ── GET: show approval page ─────────────────────────────────────────────
@@ -59,6 +60,7 @@ export default async function handler(req, res) {
       return oauthError(res, 'invalid_client', 'Unknown client or redirect_uri', 401)
     }
 
+    cors(res)
     res.writeHead(200, { 'Content-Type': 'text/html' })
     res.end(authPage({ client_id, redirect_uri, code_challenge, state: state ?? '' }))
     return

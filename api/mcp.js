@@ -18,7 +18,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { verifyAccessToken } from './_lib/oauth.js'
+import { verifyAccessToken, handleOptions, cors } from './_lib/oauth.js'
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL
@@ -261,10 +261,14 @@ async function parseBody(req) {
 }
 
 export default async function handler(req, res) {
+  // Handle CORS preflight before any auth checks
+  if (handleOptions(req, res)) return
+
   // Verify OAuth JWT access token
   const auth = req.headers['authorization'] ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null
   if (!token) {
+    cors(res)
     res.writeHead(401, {
       'Content-Type': 'application/json',
       'WWW-Authenticate': 'Bearer resource_metadata="https://projects.nathandavie.com/.well-known/oauth-protected-resource/api/mcp"',
@@ -275,6 +279,7 @@ export default async function handler(req, res) {
   try {
     await verifyAccessToken(token)
   } catch {
+    cors(res)
     res.writeHead(401, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ error: 'invalid_token', error_description: 'Token invalid or expired' }))
     return

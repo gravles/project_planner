@@ -74,7 +74,28 @@ export async function parseJsonBody(req) {
   })
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
+export function cors(res) {
+  Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v))
+}
+
+export function handleOptions(req, res) {
+  if (req.method === 'OPTIONS') {
+    cors(res)
+    res.writeHead(204)
+    res.end()
+    return true
+  }
+  return false
+}
+
 export function json(res, status, body) {
+  cors(res)
   res.writeHead(status, { 'Content-Type': 'application/json' })
   res.end(JSON.stringify(body))
 }
