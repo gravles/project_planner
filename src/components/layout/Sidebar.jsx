@@ -49,7 +49,12 @@ const NAV = [
 
 export default function Sidebar({ open }) {
   const navigate = useNavigate()
-  const { activeProperty, setActiveProperty } = useUIStore()
+  const { activeProperty, setActiveProperty, sidebarOpen, toggleSidebar } = useUIStore()
+
+  function closeMobile() {
+    // Only auto-close on the cover screen
+    if (window.innerWidth < 640 && sidebarOpen) toggleSidebar()
+  }
   const { data: properties = [] } = useProperties()
 
   async function handleSignOut() {
@@ -62,11 +67,11 @@ export default function Sidebar({ open }) {
       {open && (
         <motion.aside
           key="sidebar"
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 220, opacity: 1 }}
-          exit={{ width: 0, opacity: 0 }}
+          initial={{ x: -220, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -220, opacity: 0 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="shrink-0 bg-bg-surface border-r border-border flex flex-col overflow-hidden"
+          className="fixed sm:relative inset-y-0 left-0 z-30 sm:z-auto w-[220px] shrink-0 bg-bg-surface border-r border-border flex flex-col overflow-hidden"
         >
           {/* Logo */}
           <div className="px-5 py-5 border-b border-border">
@@ -83,9 +88,10 @@ export default function Sidebar({ open }) {
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
+                onClick={closeMobile}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                     isActive
                       ? 'bg-accent/10 text-accent'
                       : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'

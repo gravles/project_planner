@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cn, formatDate, isOverdue, PRIORITY_COLORS, STATUS_COLORS } from '../../lib/utils'
 import BulkActionBar from './BulkActionBar'
+import ProjectCard from './ProjectCard'
 import { useUpdateProject, useDeleteProject } from '../../hooks/useProjects'
 
 export default function ListView({ projects, onOpen }) {
@@ -76,7 +77,20 @@ export default function ListView({ projects, onOpen }) {
   }
 
   return (
-    <div className="px-6 pb-6 overflow-auto flex-1 scrollbar-thin">
+    <div className="overflow-auto flex-1 scrollbar-thin">
+
+      {/* ── Mobile: card list ── */}
+      <div className="sm:hidden px-4 pt-4 pb-6 space-y-2">
+        {sorted.map(project => (
+          <ProjectCard key={project.id} project={project} onOpen={() => onOpen(project.id)} />
+        ))}
+        {sorted.length === 0 && (
+          <p className="text-center text-text-muted text-sm py-16">No projects yet — tap New to create one.</p>
+        )}
+      </div>
+
+      {/* ── Desktop: table ── */}
+      <div className="hidden sm:block px-6 pb-6">
       <table className="w-full border-collapse mt-5">
         <thead>
           <tr className="border-b border-border">
@@ -184,13 +198,14 @@ export default function ListView({ projects, onOpen }) {
         </tbody>
       </table>
 
-      <BulkActionBar
-        selectedCount={selectedIds.size}
-        onStatusChange={handleBulkStatus}
-        onPriorityChange={handleBulkPriority}
-        onDelete={handleBulkDelete}
-        onClear={() => setSelectedIds(new Set())}
-      />
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onStatusChange={handleBulkStatus}
+          onPriorityChange={handleBulkPriority}
+          onDelete={handleBulkDelete}
+          onClear={() => setSelectedIds(new Set())}
+        />
+      </div>
     </div>
   )
 }

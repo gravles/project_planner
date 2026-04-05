@@ -81,37 +81,69 @@ export default function BoardView({ projects, onOpen, onUpdateStatus }) {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={({ active }) => setActiveId(active.id)}
-      onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveId(null)}
-    >
-      <div className="flex gap-4 h-full overflow-x-auto overflow-y-auto px-6 pt-5 pb-6 scrollbar-thin">
+    <>
+      {/* ── Mobile: grouped card list (no drag) ── */}
+      <div className="sm:hidden flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-6 scrollbar-thin">
         {STATUS_OPTIONS.map(status => {
           const cols = byStatus[status]
+          if (cols.length === 0) return null
           const totalEstimate = cols.reduce((s, p) => s + Number(p.estimate_cad ?? 0), 0)
           return (
-            <DroppableColumn key={status} status={status} count={cols.length} totalEstimate={totalEstimate}>
-              {cols.map(project => (
-                <DraggableCard
-                  key={project.id}
-                  project={project}
-                  onOpen={() => onOpen(project.id)}
-                />
-              ))}
-            </DroppableColumn>
+            <div key={status}>
+              <div className="flex items-center justify-between mb-2.5 px-1">
+                <div className="flex items-center gap-2">
+                  <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', STATUS_COLORS[status])}>
+                    {status}
+                  </span>
+                  <span className="text-xs text-text-muted">{cols.length}</span>
+                </div>
+                {totalEstimate > 0 && (
+                  <span className="text-[11px] text-text-muted">${totalEstimate.toLocaleString()}</span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {cols.map(project => (
+                  <ProjectCard key={project.id} project={project} onOpen={() => onOpen(project.id)} />
+                ))}
+              </div>
+            </div>
           )
         })}
       </div>
 
-      <DragOverlay dropAnimation={null}>
-        {activeProject && (
-          <div className="rotate-1 opacity-95 shadow-2xl w-[272px]">
-            <ProjectCard project={activeProject} onOpen={() => {}} />
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
+      {/* ── Desktop: drag-and-drop board ── */}
+      <DndContext
+        sensors={sensors}
+        onDragStart={({ active }) => setActiveId(active.id)}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
+        <div className="hidden sm:flex gap-4 h-full overflow-x-auto overflow-y-auto px-6 pt-5 pb-6 scrollbar-thin">
+          {STATUS_OPTIONS.map(status => {
+            const cols = byStatus[status]
+            const totalEstimate = cols.reduce((s, p) => s + Number(p.estimate_cad ?? 0), 0)
+            return (
+              <DroppableColumn key={status} status={status} count={cols.length} totalEstimate={totalEstimate}>
+                {cols.map(project => (
+                  <DraggableCard
+                    key={project.id}
+                    project={project}
+                    onOpen={() => onOpen(project.id)}
+                  />
+                ))}
+              </DroppableColumn>
+            )
+          })}
+        </div>
+
+        <DragOverlay dropAnimation={null}>
+          {activeProject && (
+            <div className="rotate-1 opacity-95 shadow-2xl w-[272px]">
+              <ProjectCard project={activeProject} onOpen={() => {}} />
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
+    </>
   )
 }

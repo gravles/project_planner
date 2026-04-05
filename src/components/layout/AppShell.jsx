@@ -8,7 +8,7 @@ import AIAddModal from '../projects/AIAddModal'
 import { useCreateProject } from '../../hooks/useProjects'
 
 export default function AppShell({ children, projectPage = false }) {
-  const { sidebarOpen } = useUIStore()
+  const { sidebarOpen, toggleSidebar } = useUIStore()
   const createProject = useCreateProject()
   const [newOpen, setNewOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
@@ -19,6 +19,15 @@ export default function AppShell({ children, projectPage = false }) {
 
   return (
     <div className="flex h-screen bg-bg-base overflow-hidden">
+
+      {/* Mobile backdrop — closes sidebar on tap */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/50 sm:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
+
       <Sidebar open={sidebarOpen} />
 
       <div className="flex-1 flex flex-col min-w-0">

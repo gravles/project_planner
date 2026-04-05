@@ -92,9 +92,9 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.16 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pointer-events-none"
           >
-            <div className="bg-bg-surface border border-border rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
+            <div className="bg-bg-surface sm:border border-border sm:rounded-2xl w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
               <div className="px-6 py-5 border-b border-border flex items-center justify-between sticky top-0 bg-bg-surface z-10">
                 <h2 className="font-display text-base font-bold text-text-primary">
                   {initialData ? 'Review AI Project' : 'New Project'}
@@ -122,7 +122,7 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
                 </div>
 
                 {/* Property + Room */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-text-muted mb-1.5">Property</label>
                     <select value={form.property_id} onChange={e => set('property_id', e.target.value)} className={inputCls}>
@@ -143,7 +143,7 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
                 </div>
 
                 {/* Status + Priority */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-text-muted mb-1.5">Status</label>
                     <select value={form.status} onChange={e => set('status', e.target.value)} className={inputCls}>
@@ -159,7 +159,7 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
                 </div>
 
                 {/* Due date + Estimate */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-text-muted mb-1.5">Due Date</label>
                     <input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} className={inputCls} />

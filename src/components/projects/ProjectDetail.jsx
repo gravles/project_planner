@@ -166,7 +166,7 @@ export default function ProjectDetail({ projectId, onClose }) {
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-        className="fixed right-0 top-0 h-full w-full max-w-[460px] z-30 bg-bg-surface border-l border-border flex flex-col shadow-2xl"
+        className="fixed right-0 top-0 h-full w-full sm:max-w-[460px] z-30 bg-bg-surface sm:border-l border-border flex flex-col shadow-2xl"
       >
         {isLoading || !project ? (
           <div className="flex-1 flex items-center justify-center">

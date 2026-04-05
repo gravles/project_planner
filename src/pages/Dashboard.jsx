@@ -105,7 +105,7 @@ export default function Dashboard() {
 
   return (
     <AppShell>
-      <div className="px-6 py-6 max-w-5xl space-y-6 overflow-y-auto flex-1 scrollbar-thin">
+      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-5xl space-y-4 sm:space-y-6 overflow-y-auto flex-1 scrollbar-thin">
 
         {/* ── Stats row ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
