@@ -87,6 +87,37 @@ Be realistic. Include labour if contractor work. JSON only.`,
   return JSON.parse(raw.replace(/```json|```/g, '').trim())
 }
 
+export async function parseReceiptImage(base64Data, mimeType = 'image/jpeg') {
+  const res = await fetch(ANTHROPIC_API, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are a receipt parser. Extract the key details from the receipt image and return ONLY a valid JSON object:
+{
+  "amount_cad": number (total amount as a number, no dollar sign),
+  "date": "YYYY-MM-DD or null if not visible",
+  "note": "Merchant name and brief description of what was purchased, max 60 chars"
+}
+If the total is ambiguous, use the largest amount. JSON only, no markdown.`,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mimeType, data: base64Data },
+          },
+          { type: 'text', text: 'Parse this receipt.' },
+        ],
+      }],
+    }),
+  })
+  const data = await res.json()
+  const raw = data.content?.find(b => b.type === 'text')?.text || '{}'
+  return JSON.parse(raw.replace(/```json|```/g, '').trim())
+}
+
 export async function generateWeeklySummary(projects) {
   const res = await fetch(ANTHROPIC_API, {
     method: 'POST',

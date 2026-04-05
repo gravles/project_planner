@@ -21,7 +21,7 @@ import PhotoGallery from './PhotoGallery'
 import AiBudgetEstimator from './AiBudgetEstimator'
 import RecurrencePanel from './RecurrencePanel'
 import SharePanel from './SharePanel'
-import { getProjectSuggestions } from '../../lib/anthropic'
+import { getProjectSuggestions, parseReceiptImage } from '../../lib/anthropic'
 import { toast } from '../../stores/toastStore'
 import {
   cn,
@@ -95,6 +95,8 @@ export default function ProjectDetail({ projectId, onClose }) {
   const [newSubtaskText, setNewSubtaskText] = useState('')
   const [spendForm, setSpendForm] = useState({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd') })
   const [spendOpen, setSpendOpen] = useState(false)
+  const [receiptScanning, setReceiptScanning] = useState(false)
+  const receiptInputRef = useRef(null)
   const [aiSuggestions, setAiSuggestions] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -134,6 +136,33 @@ export default function ProjectDetail({ projectId, onClose }) {
     if (!confirmDelete) { setConfirmDelete(true); return }
     await deleteProject.mutateAsync(projectId)
     onClose()
+  }
+
+  async function handleReceiptScan(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setReceiptScanning(true)
+    setSpendOpen(true)
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      const result = await parseReceiptImage(base64, file.type)
+      setSpendForm(f => ({
+        amount: result.amount_cad ? String(result.amount_cad) : f.amount,
+        note:   result.note  ?? f.note,
+        date:   result.date  ?? f.date,
+      }))
+    } catch {
+      toast.error('Could not read receipt. Try a clearer photo.')
+    } finally {
+      setReceiptScanning(false)
+      // Reset input so the same file can be re-scanned if needed
+      if (receiptInputRef.current) receiptInputRef.current.value = ''
+    }
   }
 
   async function fetchSuggestions() {
@@ -365,14 +394,44 @@ export default function ProjectDetail({ projectId, onClose }) {
 
               {/* ── Spend Log ── */}
               <div>
+                {/* Hidden file input — opens camera on mobile */}
+                <input
+                  ref={receiptInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleReceiptScan}
+                />
+
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Spend Log</p>
-                  <button
-                    onClick={() => setSpendOpen(o => !o)}
-                    className="text-xs text-accent hover:text-amber-300 transition-colors"
-                  >
-                    {spendOpen ? '— cancel' : '+ Add entry'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => receiptInputRef.current?.click()}
+                      disabled={receiptScanning}
+                      className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors disabled:opacity-50"
+                      title="Scan a receipt"
+                    >
+                      {receiptScanning ? (
+                        <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" /></svg>
+                      ) : (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                          <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                      )}
+                      {receiptScanning ? 'Scanning…' : 'Scan receipt'}
+                    </button>
+                    <span className="text-border">·</span>
+                    <button
+                      onClick={() => setSpendOpen(o => !o)}
+                      className="text-xs text-accent hover:text-amber-300 transition-colors"
+                    >
+                      {spendOpen ? '— cancel' : '+ Add entry'}
+                    </button>
+                  </div>
                 </div>
                 {spendOpen && (
                   <form onSubmit={handleAddSpend} className="bg-bg-elevated border border-border rounded-xl p-3 mb-2 space-y-2">
