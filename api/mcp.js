@@ -276,13 +276,18 @@ export default async function handler(req, res) {
     res.end(JSON.stringify({ error: 'unauthorized', error_description: 'Bearer token required' }))
     return
   }
-  try {
-    await verifyAccessToken(token)
-  } catch {
-    cors(res)
-    res.writeHead(401, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({ error: 'invalid_token', error_description: 'Token invalid or expired' }))
-    return
+  // Accept either a valid OAuth JWT or the static MCP_SECRET (for Claude Desktop)
+  const staticSecret = process.env.MCP_SECRET
+  const isStaticKey = staticSecret && token === staticSecret
+  if (!isStaticKey) {
+    try {
+      await verifyAccessToken(token)
+    } catch {
+      cors(res)
+      res.writeHead(401, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'invalid_token', error_description: 'Token invalid or expired' }))
+      return
+    }
   }
 
   const body = req.method === 'POST' ? await parseBody(req) : undefined
