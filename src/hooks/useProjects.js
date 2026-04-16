@@ -212,6 +212,24 @@ export function useAddSpend() {
   })
 }
 
+export function useUpdateSpend() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, amount_cad, note, entry_date, receipt_url }) => {
+      const { error } = await supabase
+        .from('spend_entries')
+        .update({ amount_cad, note: note || null, entry_date, receipt_url: receipt_url || null })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+    },
+    onError: (e) => toast.error(e.message ?? 'Failed to update spend entry'),
+  })
+}
+
 export function useDeleteSpend() {
   const qc = useQueryClient()
   return useMutation({

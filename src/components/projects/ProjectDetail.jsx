@@ -11,6 +11,7 @@ import {
   useUpdateSubtask,
   useDeleteSubtask,
   useAddSpend,
+  useUpdateSpend,
   useDeleteSpend,
   useGenerateShareToken,
 } from '../../hooks/useProjects'
@@ -118,7 +119,10 @@ export default function ProjectDetail({ projectId, onClose }) {
   const updateSubtask = useUpdateSubtask()
   const deleteSubtask = useDeleteSubtask()
   const addSpend = useAddSpend()
+  const updateSpend = useUpdateSpend()
   const deleteSpend = useDeleteSpend()
+  const [editingSpendId, setEditingSpendId] = useState(null)
+  const [editSpendForm, setEditSpendForm] = useState({})
   const generateShareToken = useGenerateShareToken()
 
   const [newSubtaskText, setNewSubtaskText] = useState('')
@@ -564,36 +568,116 @@ export default function ProjectDetail({ projectId, onClose }) {
                   {project.spend_entries?.length === 0 && (
                     <p className="text-xs text-text-muted py-2">No spend recorded yet.</p>
                   )}
-                  {project.spend_entries?.map(entry => (
-                    <div key={entry.id} className="flex items-center gap-3 py-1.5 group/spend border-b border-border/30 last:border-0">
-                      <span className="text-sm font-semibold text-text-primary w-20 shrink-0">
-                        ${Number(entry.amount_cad).toLocaleString()}
-                      </span>
-                      <span className="flex-1 text-xs text-text-muted truncate">{entry.note || '—'}</span>
-                      <span className="text-[11px] text-text-muted shrink-0">{formatDate(entry.entry_date)}</span>
-                      {entry.receipt_url && (
-                        <a
-                          href={entry.receipt_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="text-accent hover:text-amber-300 transition-colors shrink-0"
-                          title="Open product link"
+                  {project.spend_entries?.map(entry => {
+                    const isEditing = editingSpendId === entry.id
+                    if (isEditing) {
+                      return (
+                        <div key={entry.id} className="border border-accent/30 rounded-xl p-2.5 mb-1 space-y-2 bg-bg-elevated">
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="number" min="0.01" step="0.01"
+                              value={editSpendForm.amount}
+                              onChange={e => setEditSpendForm(f => ({ ...f, amount: e.target.value }))}
+                              placeholder="Amount (CAD)"
+                              className="bg-bg-base border border-border rounded-lg px-2.5 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                            />
+                            <input
+                              type="date"
+                              value={editSpendForm.date}
+                              onChange={e => setEditSpendForm(f => ({ ...f, date: e.target.value }))}
+                              className="bg-bg-base border border-border rounded-lg px-2.5 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={editSpendForm.note}
+                            onChange={e => setEditSpendForm(f => ({ ...f, note: e.target.value }))}
+                            placeholder="Note (optional)"
+                            className="w-full bg-bg-base border border-border rounded-lg px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                          />
+                          <input
+                            type="url"
+                            value={editSpendForm.link}
+                            onChange={e => setEditSpendForm(f => ({ ...f, link: e.target.value }))}
+                            placeholder="Product link (optional)"
+                            className="w-full bg-bg-base border border-border rounded-lg px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                await updateSpend.mutateAsync({
+                                  id: entry.id,
+                                  projectId,
+                                  amount_cad: Number(editSpendForm.amount),
+                                  note: editSpendForm.note,
+                                  entry_date: editSpendForm.date,
+                                  receipt_url: editSpendForm.link,
+                                })
+                                setEditingSpendId(null)
+                              }}
+                              className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-accent hover:bg-amber-400 text-bg-base transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingSpendId(null)}
+                              className="px-3 py-1.5 rounded-lg text-xs text-text-secondary hover:text-text-primary transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    }
+                    return (
+                      <div key={entry.id} className="flex items-center gap-3 py-1.5 group/spend border-b border-border/30 last:border-0">
+                        <span className="text-sm font-semibold text-text-primary w-20 shrink-0">
+                          ${Number(entry.amount_cad).toLocaleString()}
+                        </span>
+                        <span className="flex-1 text-xs text-text-muted truncate">{entry.note || '—'}</span>
+                        <span className="text-[11px] text-text-muted shrink-0">{formatDate(entry.entry_date)}</span>
+                        {entry.receipt_url && (
+                          <a
+                            href={entry.receipt_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="text-accent hover:text-amber-300 transition-colors shrink-0"
+                            title="Open product link"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                              <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                            </svg>
+                          </a>
+                        )}
+                        <button
+                          onClick={() => {
+                            setEditingSpendId(entry.id)
+                            setEditSpendForm({
+                              amount: String(entry.amount_cad),
+                              note: entry.note ?? '',
+                              date: entry.entry_date,
+                              link: entry.receipt_url ?? '',
+                            })
+                          }}
+                          className="opacity-0 group-hover/spend:opacity-100 text-text-muted hover:text-text-primary transition-all"
+                          title="Edit"
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                           </svg>
-                        </a>
-                      )}
-                      <button
-                        onClick={() => deleteSpend.mutate({ id: entry.id, projectId })}
-                        className="opacity-0 group-hover/spend:opacity-100 text-text-muted hover:text-danger transition-all text-xs"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
+                        </button>
+                        <button
+                          onClick={() => deleteSpend.mutate({ id: entry.id, projectId })}
+                          className="opacity-0 group-hover/spend:opacity-100 text-text-muted hover:text-danger transition-all text-xs"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
 
