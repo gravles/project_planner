@@ -14,7 +14,7 @@ import ProjectCard from './ProjectCard'
 function DroppableColumn({ status, children, count, totalEstimate }) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
   return (
-    <div className="flex flex-col w-[272px] lg:w-[300px] xl:w-[340px] shrink-0">
+    <div className="flex flex-col flex-1 min-w-[260px] max-w-[480px]">
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
           <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', STATUS_COLORS[status])}>
