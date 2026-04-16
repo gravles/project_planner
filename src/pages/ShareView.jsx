@@ -31,6 +31,8 @@ export default function ShareView() {
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [photoTab, setPhotoTab] = useState('progress')
+  const [lightbox, setLightbox] = useState(null)
 
   useEffect(() => {
     fetch(`/api/share?token=${token}`)
@@ -55,8 +57,6 @@ export default function ShareView() {
     </div>
   )
 
-  const [photoTab, setPhotoTab] = useState('progress')
-  const [lightbox, setLightbox] = useState(null)
   const totalSpent = project.spend_entries?.reduce((s, e) => s + Number(e.amount_cad), 0) ?? 0
   const subtasksDone = project.subtasks?.filter(s => s.done).length ?? 0
   const subtasksTotal = project.subtasks?.length ?? 0
