@@ -12,6 +12,7 @@ import {
   useDeleteSubtask,
   useAddSpend,
   useDeleteSpend,
+  useGenerateShareToken,
 } from '../../hooks/useProjects'
 import { useSaveAsTemplate } from '../../hooks/useTemplates'
 import { useProperties } from '../../hooks/useProperties'
@@ -118,6 +119,7 @@ export default function ProjectDetail({ projectId, onClose }) {
   const deleteSubtask = useDeleteSubtask()
   const addSpend = useAddSpend()
   const deleteSpend = useDeleteSpend()
+  const generateShareToken = useGenerateShareToken()
 
   const [newSubtaskText, setNewSubtaskText] = useState('')
   const [spendForm, setSpendForm] = useState({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd') })
@@ -642,7 +644,26 @@ export default function ProjectDetail({ projectId, onClose }) {
 
               {/* ── Sharing ── */}
               <div>
-                <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">Shared With</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Shared With</p>
+                  <button
+                    onClick={async () => {
+                      let token = project.share_token
+                      if (!token) token = await generateShareToken.mutateAsync(projectId)
+                      const url = `${window.location.origin}/share/${token}`
+                      await navigator.clipboard.writeText(url)
+                      toast.success('Public link copied!')
+                    }}
+                    disabled={generateShareToken.isPending}
+                    className="text-xs text-accent hover:text-amber-300 transition-colors disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    {generateShareToken.isPending ? 'Generating…' : 'Copy public link'}
+                  </button>
+                </div>
                 <SharePanel projectId={projectId} />
               </div>
 
@@ -666,6 +687,14 @@ export default function ProjectDetail({ projectId, onClose }) {
                 >
                   Save as template
                 </button>
+                {project.status === 'Done' && (
+                  <button
+                    onClick={() => saveSelect('status', 'In Progress')}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-info/40 text-info hover:bg-info/10 transition-colors"
+                  >
+                    Reopen project
+                  </button>
+                )}
                 <div className="flex-1" />
                 <button
                   onClick={handleDelete}

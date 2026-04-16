@@ -8,6 +8,7 @@ import CalendarView from '../components/projects/CalendarView'
 import ProjectDetail from '../components/projects/ProjectDetail'
 import { useProjects, useUpdateProject } from '../hooks/useProjects'
 import { useUIStore } from '../stores/uiStore'
+import QuickSpendFAB from '../components/projects/QuickSpendFAB'
 
 export default function Projects() {
   const { viewMode, activeProperty, detailProjectId, openDetail, closeDetail, searchQuery, activeFilters } = useUIStore()
@@ -76,6 +77,7 @@ export default function Projects() {
         )}
       </AnimatePresence>
 
+      <QuickSpendFAB />
     </AppShell>
   )
 }

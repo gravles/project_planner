@@ -14,6 +14,7 @@
  * registering the MCP server in Claude settings.
  */
 
+import { randomUUID } from 'crypto'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { createClient } from '@supabase/supabase-js'
@@ -48,6 +49,21 @@ async function resolveProject(supabase, titleSearch) {
     error: `Multiple matches: ${data.map(p => `"${p.title}" (${p.id})`).join(', ')} — use the id to be precise.`,
   }
   return { id: data[0].id, title: data[0].title }
+}
+
+// Find a subtask within a project by text search or ID.
+async function resolveSubtask(supabase, projectId, textSearch, subtaskId) {
+  if (subtaskId) {
+    const { data } = await supabase.from('subtasks').select('id, text, done').eq('id', subtaskId).single()
+    return data ?? { error: `Subtask not found with id ${subtaskId}` }
+  }
+  if (!textSearch) return { error: 'Provide subtask_id or subtask_text_search.' }
+  const { data } = await supabase.from('subtasks').select('id, text, done').eq('project_id', projectId).ilike('text', `%${textSearch}%`)
+  if (!data?.length) return { error: `No subtask found matching "${textSearch}"` }
+  if (data.length > 1) return {
+    error: `Multiple matches: ${data.map(s => `"${s.text}" (${s.id})`).join(', ')} — use subtask_id to be precise.`,
+  }
+  return data[0]
 }
 
 function text(str) {
@@ -240,6 +256,183 @@ function buildServer() {
       })
       if (error) throw new Error(error.message)
       return text(`Logged $${amount_cad} CAD${note ? ` — ${note}` : ''}`)
+    },
+  )
+
+  // ── get_project ─────────────────────────────────────────────────────────────
+  server.tool(
+    'get_project',
+    'Get full details of a single project: all subtasks with text/status, all spend entries, notes, budget',
+    {
+      id: z.string().optional().describe('Project UUID (preferred)'),
+      title_search: z.string().optional().describe('Search by title substring'),
+    },
+    async ({ id, title_search }) => {
+      let projectId = id
+      if (!projectId) {
+        if (!title_search) return text('Provide id or title_search.')
+        const resolved = await resolveProject(sb, title_search)
+        if (resolved.error) return text(resolved.error)
+        projectId = resolved.id
+      }
+      const { data, error } = await sb
+        .from('projects')
+        .select(`
+          id, title, room, status, priority, due_date, estimate_cad, vendor, notes,
+          time_estimate_hours, time_actual_hours,
+          properties(name, color),
+          subtasks(id, text, done, position),
+          spend_entries(id, amount_cad, note, entry_date)
+        `)
+        .eq('id', projectId)
+        .single()
+      if (error) throw new Error(error.message)
+      data.subtasks?.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      data.spend_entries?.sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date))
+      const totalSpent = data.spend_entries?.reduce((s, e) => s + Number(e.amount_cad), 0) ?? 0
+      return text(JSON.stringify({
+        ...data,
+        total_spent_cad: totalSpent,
+        budget_remaining_cad: Number(data.estimate_cad ?? 0) - totalSpent,
+        subtasks_progress: `${data.subtasks?.filter(s => s.done).length ?? 0}/${data.subtasks?.length ?? 0} done`,
+      }, null, 2))
+    },
+  )
+
+  // ── update_subtask ────────────────────────────────────────────────────────
+  server.tool(
+    'update_subtask',
+    'Mark a subtask done/undone or update its text. Find by subtask_id (from get_project) or by project + text search.',
+    {
+      subtask_id: z.string().optional().describe('Subtask UUID — use get_project to find it'),
+      project_id: z.string().optional().describe('Project UUID — used with subtask_text_search'),
+      title_search: z.string().optional().describe('Project title search — used with subtask_text_search'),
+      subtask_text_search: z.string().optional().describe('Search subtask by text within the project'),
+      done: z.boolean().optional().describe('true = mark done, false = mark not done'),
+      text: z.string().optional().describe('New text for the subtask'),
+    },
+    async ({ subtask_id, project_id, title_search, subtask_text_search, done, text: newText }) => {
+      let sid = subtask_id
+      if (!sid) {
+        let pid = project_id
+        if (!pid) {
+          if (!title_search) return text('Provide subtask_id, or project context with subtask_text_search.')
+          const resolved = await resolveProject(sb, title_search)
+          if (resolved.error) return text(resolved.error)
+          pid = resolved.id
+        }
+        const resolved = await resolveSubtask(sb, pid, subtask_text_search, null)
+        if (resolved.error) return text(resolved.error)
+        sid = resolved.id
+      }
+      const updates = {}
+      if (done !== undefined) updates.done = done
+      if (newText) updates.text = newText
+      if (Object.keys(updates).length === 0) return text('Provide done or text to update.')
+      const { error } = await sb.from('subtasks').update(updates).eq('id', sid)
+      if (error) throw new Error(error.message)
+      const parts = []
+      if (done !== undefined) parts.push(done ? 'marked as done ✓' : 'marked as not done')
+      if (newText) parts.push(`text updated to "${newText}"`)
+      return text(`Subtask ${parts.join(', ')}`)
+    },
+  )
+
+  // ── delete_subtask ────────────────────────────────────────────────────────
+  server.tool(
+    'delete_subtask',
+    'Remove a subtask. Find by subtask_id or by project + text search.',
+    {
+      subtask_id: z.string().optional().describe('Subtask UUID — use get_project to find it'),
+      project_id: z.string().optional(),
+      title_search: z.string().optional().describe('Project title search'),
+      subtask_text_search: z.string().optional().describe('Subtask text to search for'),
+    },
+    async ({ subtask_id, project_id, title_search, subtask_text_search }) => {
+      let sid = subtask_id
+      if (!sid) {
+        let pid = project_id
+        if (!pid) {
+          if (!title_search) return text('Provide subtask_id, or project context with subtask_text_search.')
+          const resolved = await resolveProject(sb, title_search)
+          if (resolved.error) return text(resolved.error)
+          pid = resolved.id
+        }
+        const resolved = await resolveSubtask(sb, pid, subtask_text_search, null)
+        if (resolved.error) return text(resolved.error)
+        sid = resolved.id
+      }
+      const { error } = await sb.from('subtasks').delete().eq('id', sid)
+      if (error) throw new Error(error.message)
+      return text('Subtask deleted.')
+    },
+  )
+
+  // ── list_spend ────────────────────────────────────────────────────────────
+  server.tool(
+    'list_spend',
+    'List all spend entries for a project with totals',
+    {
+      project_id: z.string().optional(),
+      title_search: z.string().optional().describe('Project title substring'),
+    },
+    async ({ project_id, title_search }) => {
+      let pid = project_id
+      if (!pid) {
+        if (!title_search) return text('Provide project_id or title_search.')
+        const resolved = await resolveProject(sb, title_search)
+        if (resolved.error) return text(resolved.error)
+        pid = resolved.id
+      }
+      const { data, error } = await sb
+        .from('spend_entries')
+        .select('id, amount_cad, note, entry_date')
+        .eq('project_id', pid)
+        .order('entry_date', { ascending: false })
+      if (error) throw new Error(error.message)
+      const total = data?.reduce((s, e) => s + Number(e.amount_cad), 0) ?? 0
+      return text(JSON.stringify({ entries: data, total_cad: total }, null, 2))
+    },
+  )
+
+  // ── delete_spend ──────────────────────────────────────────────────────────
+  server.tool(
+    'delete_spend',
+    'Delete a spend entry by its ID (use list_spend to find the ID)',
+    {
+      spend_id: z.string().describe('Spend entry UUID'),
+    },
+    async ({ spend_id }) => {
+      const { error } = await sb.from('spend_entries').delete().eq('id', spend_id)
+      if (error) throw new Error(error.message)
+      return text('Spend entry deleted.')
+    },
+  )
+
+  // ── generate_share_link ───────────────────────────────────────────────────
+  server.tool(
+    'generate_share_link',
+    'Generate a public read-only share link for a project (no login required to view)',
+    {
+      id: z.string().optional().describe('Project UUID'),
+      title_search: z.string().optional().describe('Project title substring'),
+    },
+    async ({ id, title_search }) => {
+      let projectId = id
+      if (!projectId) {
+        if (!title_search) return text('Provide id or title_search.')
+        const resolved = await resolveProject(sb, title_search)
+        if (resolved.error) return text(resolved.error)
+        projectId = resolved.id
+      }
+      const { data: existing } = await sb.from('projects').select('share_token, title').eq('id', projectId).single()
+      let token = existing?.share_token
+      if (!token) {
+        token = randomUUID()
+        const { error } = await sb.from('projects').update({ share_token: token }).eq('id', projectId)
+        if (error) throw new Error(error.message)
+      }
+      return text(`Share link for "${existing?.title}": https://projects.nathandavie.com/share/${token}`)
     },
   )
 

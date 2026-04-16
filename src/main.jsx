@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 import Admin from './pages/Admin'
 import Vendors from './pages/Vendors'
 import Reports from './pages/Reports'
+import ShareView from './pages/ShareView'
 import Toast from './components/ui/Toast'
 
 const queryClient = new QueryClient({
@@ -67,6 +68,7 @@ createRoot(document.getElementById('root')).render(
               </ProtectedRoute>
             }
           />
+          <Route path="/share/:token" element={<ShareView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toast />

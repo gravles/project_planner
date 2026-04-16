@@ -36,6 +36,7 @@ export function useProject(id) {
         .from('projects')
         .select(`
           *,
+          share_token,
           properties(*),
           subtasks(*),
           spend_entries(*),
@@ -223,5 +224,21 @@ export function useDeleteSpend() {
       qc.invalidateQueries({ queryKey: ['project', projectId] })
       qc.invalidateQueries({ queryKey: ['projects'] })
     },
+  })
+}
+
+export function useGenerateShareToken() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (projectId) => {
+      const token = crypto.randomUUID()
+      const { error } = await supabase.from('projects').update({ share_token: token }).eq('id', projectId)
+      if (error) throw error
+      return token
+    },
+    onSuccess: (_, projectId) => {
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
+    },
+    onError: (e) => toast.error(e.message ?? 'Failed to generate share link'),
   })
 }
