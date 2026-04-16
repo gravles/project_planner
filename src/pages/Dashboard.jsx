@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { isAfter, parseISO, startOfDay } from 'date-fns'
 import AppShell from '../components/layout/AppShell'
+import ProjectDetail from '../components/projects/ProjectDetail'
 import { useProjects } from '../hooks/useProjects'
 import { useProperties } from '../hooks/useProperties'
 import { generateWeeklySummary } from '../lib/anthropic'
-import { cn, STATUS_COLORS, PROPERTY_COLORS } from '../lib/utils'
+import { useUIStore } from '../stores/uiStore'
+import { cn, STATUS_COLORS, PROPERTY_COLORS, formatDate } from '../lib/utils'
 
 function StatCard({ label, value, sub, accent = false }) {
   return (
@@ -37,6 +41,7 @@ const CUSTOM_TOOLTIP = ({ active, payload, label }) => {
 export default function Dashboard() {
   const { data: projects = [], isLoading } = useProjects()
   const { data: properties = [] } = useProperties()
+  const { detailProjectId, openDetail, closeDetail } = useUIStore()
   const [summary, setSummary] = useState(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
 
@@ -63,6 +68,12 @@ export default function Dashboard() {
       color: prop.color,
     }
   })
+
+  // ── Overdue ────────────────────────────────────────────────────────────────
+  const today = startOfDay(new Date())
+  const overdueProjects = projects.filter(p =>
+    p.due_date && p.status !== 'Done' && isAfter(today, parseISO(p.due_date))
+  ).sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 
   // ── Status breakdown ───────────────────────────────────────────────────────
   const statusData = ['Backlog', 'In Progress', 'Blocked', 'Done'].map(s => ({
@@ -106,6 +117,41 @@ export default function Dashboard() {
   return (
     <AppShell>
       <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-5xl space-y-4 sm:space-y-6 overflow-y-auto flex-1 scrollbar-thin">
+
+        {/* ── Overdue alert ── */}
+        {overdueProjects.length > 0 && (
+          <div className="bg-danger/10 border border-danger/30 rounded-2xl px-5 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <p className="text-xs font-semibold text-danger uppercase tracking-wider">
+                {overdueProjects.length} Overdue {overdueProjects.length === 1 ? 'Project' : 'Projects'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              {overdueProjects.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => openDetail(p.id)}
+                  className="w-full flex items-center justify-between gap-3 text-left hover:opacity-80 transition-opacity"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {p.properties?.color && (
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.properties.color }} />
+                    )}
+                    <span className="text-sm text-text-primary font-medium truncate">{p.title}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-danger">{formatDate(p.due_date)}</span>
+                    <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', STATUS_COLORS[p.status])}>{p.status}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Stats row ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -207,6 +253,12 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      <AnimatePresence>
+        {detailProjectId && (
+          <ProjectDetail key={detailProjectId} projectId={detailProjectId} onClose={closeDetail} />
+        )}
+      </AnimatePresence>
 
     </AppShell>
   )

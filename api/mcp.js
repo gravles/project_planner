@@ -183,9 +183,9 @@ function buildServer() {
       due_date: z.string().optional().describe('YYYY-MM-DD'),
       estimate_cad: z.number().optional(),
       vendor: z.string().optional(),
-      notes: z.string().optional(),
       room: z.string().optional(),
     },
+    // NOTE: notes is intentionally excluded — use append_note to add notes safely.
     async ({ id, title_search, ...updates }) => {
       let projectId = id
       if (!projectId) {
@@ -406,6 +406,131 @@ function buildServer() {
       const { error } = await sb.from('spend_entries').delete().eq('id', spend_id)
       if (error) throw new Error(error.message)
       return text('Spend entry deleted.')
+    },
+  )
+
+  // ── get_summary ──────────────────────────────────────────────────────────
+  server.tool(
+    'get_summary',
+    'Dashboard overview: project counts by status, overdue items, urgent items, and budget totals by property. Use for morning check-ins and status overviews.',
+    {},
+    async () => {
+      const { data: projects, error } = await sb
+        .from('projects')
+        .select(`
+          id, title, status, priority, due_date, estimate_cad,
+          properties(name),
+          spend_entries(amount_cad)
+        `)
+        .eq('is_template', false)
+      if (error) throw new Error(error.message)
+
+      const today = new Date().toISOString().split('T')[0]
+      const counts = { total: 0, backlog: 0, in_progress: 0, blocked: 0, done: 0 }
+      const byProperty = {}
+      let totalEstimate = 0, totalSpent = 0
+
+      for (const p of projects) {
+        counts.total++
+        if (p.status === 'Backlog') counts.backlog++
+        else if (p.status === 'In Progress') counts.in_progress++
+        else if (p.status === 'Blocked') counts.blocked++
+        else if (p.status === 'Done') counts.done++
+
+        const propName = p.properties?.name ?? 'No property'
+        if (!byProperty[propName]) byProperty[propName] = { estimate: 0, spent: 0, active: 0 }
+        const spent = p.spend_entries?.reduce((s, e) => s + Number(e.amount_cad), 0) ?? 0
+        byProperty[propName].estimate += Number(p.estimate_cad ?? 0)
+        byProperty[propName].spent += spent
+        if (p.status !== 'Done') byProperty[propName].active++
+        totalEstimate += Number(p.estimate_cad ?? 0)
+        totalSpent += spent
+      }
+
+      const overdue = projects
+        .filter(p => p.due_date && p.due_date < today && p.status !== 'Done')
+        .sort((a, b) => a.due_date.localeCompare(b.due_date))
+        .map(p => ({ id: p.id, title: p.title, due_date: p.due_date, status: p.status, priority: p.priority, property: p.properties?.name }))
+
+      const urgent = projects
+        .filter(p => p.priority === 'Urgent' && p.status !== 'Done')
+        .map(p => ({ id: p.id, title: p.title, status: p.status, property: p.properties?.name }))
+
+      return text(JSON.stringify({
+        counts,
+        overdue,
+        urgent_items: urgent,
+        budget: { total_estimate_cad: totalEstimate, total_spent_cad: totalSpent, remaining_cad: totalEstimate - totalSpent },
+        by_property: byProperty,
+      }, null, 2))
+    },
+  )
+
+  // ── list_tags ─────────────────────────────────────────────────────────────
+  server.tool(
+    'list_tags',
+    'List all available tags that can be applied to projects',
+    {},
+    async () => {
+      const { data, error } = await sb.from('tags').select('id, name, color').order('name')
+      if (error) throw new Error(error.message)
+      return text(JSON.stringify(data, null, 2))
+    },
+  )
+
+  // ── add_tag ───────────────────────────────────────────────────────────────
+  server.tool(
+    'add_tag',
+    'Add a tag to a project. Use list_tags to see available tags.',
+    {
+      project_id: z.string().optional(),
+      title_search: z.string().optional().describe('Project title substring'),
+      tag_name: z.string().describe('Tag name (partial match)'),
+    },
+    async ({ project_id, title_search, tag_name }) => {
+      let pid = project_id
+      if (!pid) {
+        if (!title_search) return text('Provide project_id or title_search.')
+        const resolved = await resolveProject(sb, title_search)
+        if (resolved.error) return text(resolved.error)
+        pid = resolved.id
+      }
+      const { data: tags } = await sb.from('tags').select('id, name').ilike('name', `%${tag_name}%`)
+      if (!tags?.length) return text(`No tag found matching "${tag_name}". Use list_tags to see available tags.`)
+      if (tags.length > 1) return text(`Multiple matches: ${tags.map(t => t.name).join(', ')} — be more specific.`)
+      const tag = tags[0]
+      const { data: existing } = await sb.from('project_tags').select('tag_id').eq('project_id', pid).eq('tag_id', tag.id).maybeSingle()
+      if (existing) return text(`Tag "${tag.name}" is already on this project.`)
+      const { error } = await sb.from('project_tags').insert({ project_id: pid, tag_id: tag.id })
+      if (error) throw new Error(error.message)
+      return text(`Added tag "${tag.name}".`)
+    },
+  )
+
+  // ── remove_tag ────────────────────────────────────────────────────────────
+  server.tool(
+    'remove_tag',
+    'Remove a tag from a project.',
+    {
+      project_id: z.string().optional(),
+      title_search: z.string().optional().describe('Project title substring'),
+      tag_name: z.string().describe('Tag name (partial match)'),
+    },
+    async ({ project_id, title_search, tag_name }) => {
+      let pid = project_id
+      if (!pid) {
+        if (!title_search) return text('Provide project_id or title_search.')
+        const resolved = await resolveProject(sb, title_search)
+        if (resolved.error) return text(resolved.error)
+        pid = resolved.id
+      }
+      const { data: tags } = await sb.from('tags').select('id, name').ilike('name', `%${tag_name}%`)
+      if (!tags?.length) return text(`No tag found matching "${tag_name}".`)
+      if (tags.length > 1) return text(`Multiple matches: ${tags.map(t => t.name).join(', ')} — be more specific.`)
+      const tag = tags[0]
+      const { error } = await sb.from('project_tags').delete().eq('project_id', pid).eq('tag_id', tag.id)
+      if (error) throw new Error(error.message)
+      return text(`Removed tag "${tag.name}".`)
     },
   )
 

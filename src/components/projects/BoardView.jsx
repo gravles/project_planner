@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -34,6 +34,77 @@ function DroppableColumn({ status, children, count, totalEstimate }) {
         )}
       >
         {children}
+      </div>
+    </div>
+  )
+}
+
+const STATUS_NEXT = {
+  'Backlog': 'In Progress',
+  'In Progress': 'Done',
+  'Blocked': 'In Progress',
+  'Done': null,
+}
+const STATUS_PREV = {
+  'In Progress': 'Backlog',
+  'Done': 'In Progress',
+  'Blocked': 'Backlog',
+  'Backlog': null,
+}
+
+function SwipeableCard({ project, onOpen, onUpdateStatus }) {
+  const touchStartX = useRef(null)
+  const [swipeDelta, setSwipeDelta] = useState(0)
+
+  const nextStatus = STATUS_NEXT[project.status]
+  const prevStatus = STATUS_PREV[project.status]
+  const THRESHOLD = 72
+
+  function onTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX
+    setSwipeDelta(0)
+  }
+
+  function onTouchMove(e) {
+    if (touchStartX.current === null) return
+    const delta = e.touches[0].clientX - touchStartX.current
+    setSwipeDelta(Math.max(-THRESHOLD, Math.min(THRESHOLD, delta)))
+  }
+
+  function onTouchEnd() {
+    if (swipeDelta >= THRESHOLD && nextStatus) {
+      onUpdateStatus(project.id, nextStatus)
+    } else if (swipeDelta <= -THRESHOLD && prevStatus) {
+      onUpdateStatus(project.id, prevStatus)
+    }
+    touchStartX.current = null
+    setSwipeDelta(0)
+  }
+
+  const showRight = swipeDelta > 20 && nextStatus
+  const showLeft = swipeDelta < -20 && prevStatus
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      {/* Right hint (advance status) */}
+      {showRight && (
+        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-0">
+          <span className="text-[11px] font-semibold text-success">→ {nextStatus}</span>
+        </div>
+      )}
+      {/* Left hint (revert status) */}
+      {showLeft && (
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none z-0">
+          <span className="text-[11px] font-semibold text-text-muted">← {prevStatus}</span>
+        </div>
+      )}
+      <div
+        style={{ transform: `translateX(${swipeDelta}px)`, transition: swipeDelta === 0 ? 'transform 0.2s ease' : 'none' }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <ProjectCard project={project} onOpen={onOpen} />
       </div>
     </div>
   )
@@ -103,7 +174,12 @@ export default function BoardView({ projects, onOpen, onUpdateStatus }) {
               </div>
               <div className="space-y-2">
                 {cols.map(project => (
-                  <ProjectCard key={project.id} project={project} onOpen={() => onOpen(project.id)} />
+                  <SwipeableCard
+                    key={project.id}
+                    project={project}
+                    onOpen={() => onOpen(project.id)}
+                    onUpdateStatus={onUpdateStatus}
+                  />
                 ))}
               </div>
             </div>

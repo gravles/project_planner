@@ -7,6 +7,8 @@ export default function ProjectCard({ project, onOpen, isDragging = false }) {
   const spent = project.spend_entries?.reduce((s, e) => s + Number(e.amount_cad), 0) ?? 0
   const estimate = Number(project.estimate_cad)
   const overdue = isOverdue(project.due_date) && project.status !== 'Done'
+  const overBudget = estimate > 0 && spent > estimate
+  const budgetPct = estimate > 0 ? Math.min(100, (spent / estimate) * 100) : 0
 
   return (
     <div
@@ -70,11 +72,24 @@ export default function ProjectCard({ project, onOpen, isDragging = false }) {
           )}
         </div>
         {estimate > 0 && (
-          <span className={spent > estimate ? 'text-danger' : ''}>
+          <span className={overBudget ? 'text-danger font-medium' : ''}>
             {spent > 0 ? `$${spent.toLocaleString()} / ` : ''}${estimate.toLocaleString()}
           </span>
         )}
       </div>
+
+      {/* Budget progress bar */}
+      {estimate > 0 && (
+        <div className="mt-2 h-1 rounded-full bg-bg-base overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${budgetPct}%`,
+              backgroundColor: overBudget ? '#ef4444' : budgetPct > 80 ? '#f59e0b' : '#22c55e',
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
