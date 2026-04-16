@@ -2,6 +2,30 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { cn, STATUS_COLORS, formatDate } from '../lib/utils'
 
+const PHOTO_TABS = ['before', 'progress', 'after']
+const PHOTO_LABELS = { before: 'Before', progress: 'Progress', after: 'After' }
+
+function Lightbox({ photos, index: initialIndex, onClose }) {
+  const [idx, setIdx] = useState(initialIndex)
+  const photo = photos[idx]
+  return (
+    <div className="fixed inset-0 z-50 bg-black/95 flex flex-col" onClick={onClose}>
+      <div className="flex justify-between items-center px-5 py-4" onClick={e => e.stopPropagation()}>
+        <span className="text-white/50 text-sm">{idx + 1} / {photos.length}</span>
+        <button onClick={onClose} className="text-white/60 hover:text-white text-xl">✕</button>
+      </div>
+      <div className="flex-1 flex items-center justify-center gap-4 px-4" onClick={e => e.stopPropagation()}>
+        <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}
+          className="text-white/40 hover:text-white disabled:opacity-20 p-3 text-2xl">←</button>
+        <img src={photo.url} alt={photo.caption ?? ''} className="max-h-[75vh] max-w-[80vw] object-contain rounded-xl shadow-2xl" />
+        <button onClick={() => setIdx(i => Math.min(photos.length - 1, i + 1))} disabled={idx === photos.length - 1}
+          className="text-white/40 hover:text-white disabled:opacity-20 p-3 text-2xl">→</button>
+      </div>
+      {photo.caption && <p className="text-center text-white/60 text-sm pb-4" onClick={e => e.stopPropagation()}>{photo.caption}</p>}
+    </div>
+  )
+}
+
 export default function ShareView() {
   const { token } = useParams()
   const [project, setProject] = useState(null)
@@ -31,6 +55,8 @@ export default function ShareView() {
     </div>
   )
 
+  const [photoTab, setPhotoTab] = useState('progress')
+  const [lightbox, setLightbox] = useState(null)
   const totalSpent = project.spend_entries?.reduce((s, e) => s + Number(e.amount_cad), 0) ?? 0
   const subtasksDone = project.subtasks?.filter(s => s.done).length ?? 0
   const subtasksTotal = project.subtasks?.length ?? 0
@@ -137,7 +163,61 @@ export default function ShareView() {
           </div>
         )}
 
+        {/* Photos */}
+        {project.project_photos?.length > 0 && (
+          <div className="bg-bg-surface border border-border rounded-2xl px-4 py-3 mb-4">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Photos</p>
+            {/* Tab bar */}
+            <div className="flex gap-0.5 mb-3">
+              {PHOTO_TABS.map(tab => {
+                const count = project.project_photos.filter(p => p.photo_type === tab).length
+                if (count === 0) return null
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setPhotoTab(tab)}
+                    className={cn(
+                      'text-xs px-3 py-1 rounded-lg font-medium transition-colors',
+                      photoTab === tab ? 'bg-bg-elevated text-text-primary' : 'text-text-muted hover:text-text-secondary',
+                    )}
+                  >
+                    {PHOTO_LABELS[tab]} <span className="text-text-muted">({count})</span>
+                  </button>
+                )
+              })}
+            </div>
+            {/* Grid */}
+            {(() => {
+              const tabPhotos = project.project_photos.filter(p => p.photo_type === photoTab)
+              if (!tabPhotos.length) {
+                // Switch to first tab that has photos
+                const firstWithPhotos = PHOTO_TABS.find(t => project.project_photos.some(p => p.photo_type === t))
+                if (firstWithPhotos && firstWithPhotos !== photoTab) setPhotoTab(firstWithPhotos)
+                return null
+              }
+              return (
+                <div className="grid grid-cols-3 gap-2">
+                  {tabPhotos.map((photo, i) => (
+                    <div key={i} className="aspect-square">
+                      <img
+                        src={photo.url}
+                        alt={photo.caption ?? ''}
+                        onClick={() => setLightbox({ photos: tabPhotos, index: i })}
+                        className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
         <p className="text-xs text-center text-text-muted mt-8">Project Planner · Read-only view</p>
+
+        {lightbox && (
+          <Lightbox photos={lightbox.photos} index={lightbox.index} onClose={() => setLightbox(null)} />
+        )}
       </div>
     </div>
   )
