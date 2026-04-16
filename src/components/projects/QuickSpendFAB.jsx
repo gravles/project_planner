@@ -7,6 +7,7 @@ export default function QuickSpendFAB() {
   const [projectId, setProjectId] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
+  const [link, setLink] = useState('')
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
 
   const { data: projects = [] } = useProjects()
@@ -22,6 +23,7 @@ export default function QuickSpendFAB() {
     setProjectId('')
     setAmount('')
     setNote('')
+    setLink('')
     setDate(format(new Date(), 'yyyy-MM-dd'))
   }
 
@@ -33,6 +35,7 @@ export default function QuickSpendFAB() {
       amount_cad: Number(amount),
       note: note.trim() || null,
       entry_date: date,
+      receipt_url: link.trim() || null,
     })
     handleClose()
   }
@@ -110,6 +113,13 @@ export default function QuickSpendFAB() {
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 placeholder="Note (optional)"
+                className="w-full bg-bg-elevated border border-border rounded-xl px-3 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+              <input
+                type="url"
+                value={link}
+                onChange={e => setLink(e.target.value)}
+                placeholder="Product link (optional)"
                 className="w-full bg-bg-elevated border border-border rounded-xl px-3 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
               />
 

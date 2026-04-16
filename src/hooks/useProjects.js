@@ -197,10 +197,10 @@ export function useDeleteSubtask() {
 export function useAddSpend() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ projectId, amount_cad, note, entry_date }) => {
+    mutationFn: async ({ projectId, amount_cad, note, entry_date, receipt_url }) => {
       const { error } = await supabase
         .from('spend_entries')
-        .insert({ project_id: projectId, amount_cad, note, entry_date })
+        .insert({ project_id: projectId, amount_cad, note, entry_date, receipt_url: receipt_url || null })
       if (error) throw error
     },
     onSuccess: (_, { projectId }) => {

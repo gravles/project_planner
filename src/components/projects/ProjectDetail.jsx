@@ -122,7 +122,7 @@ export default function ProjectDetail({ projectId, onClose }) {
   const generateShareToken = useGenerateShareToken()
 
   const [newSubtaskText, setNewSubtaskText] = useState('')
-  const [spendForm, setSpendForm] = useState({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd') })
+  const [spendForm, setSpendForm] = useState({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd'), link: '' })
   const [spendOpen, setSpendOpen] = useState(false)
   const [receiptScanning, setReceiptScanning] = useState(false)
   const receiptInputRef = useRef(null)
@@ -156,8 +156,9 @@ export default function ProjectDetail({ projectId, onClose }) {
       amount_cad: Number(spendForm.amount),
       note: spendForm.note || null,
       entry_date: spendForm.date,
+      receipt_url: spendForm.link || null,
     })
-    setSpendForm({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd') })
+    setSpendForm({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd'), link: '' })
     setSpendOpen(false)
   }
 
@@ -544,6 +545,13 @@ export default function ProjectDetail({ projectId, onClose }) {
                       placeholder="Note (optional)"
                       className="w-full bg-bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                     />
+                    <input
+                      type="url"
+                      value={spendForm.link}
+                      onChange={e => setSpendForm(f => ({ ...f, link: e.target.value }))}
+                      placeholder="Product link (optional)"
+                      className="w-full bg-bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                    />
                     <button
                       type="submit"
                       className="w-full py-1.5 rounded-lg text-sm font-semibold bg-accent hover:bg-amber-400 text-bg-base transition-colors"
@@ -563,6 +571,21 @@ export default function ProjectDetail({ projectId, onClose }) {
                       </span>
                       <span className="flex-1 text-xs text-text-muted truncate">{entry.note || '—'}</span>
                       <span className="text-[11px] text-text-muted shrink-0">{formatDate(entry.entry_date)}</span>
+                      {entry.receipt_url && (
+                        <a
+                          href={entry.receipt_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="text-accent hover:text-amber-300 transition-colors shrink-0"
+                          title="Open product link"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                          </svg>
+                        </a>
+                      )}
                       <button
                         onClick={() => deleteSpend.mutate({ id: entry.id, projectId })}
                         className="opacity-0 group-hover/spend:opacity-100 text-text-muted hover:text-danger transition-all text-xs"

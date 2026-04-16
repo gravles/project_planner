@@ -239,8 +239,9 @@ function buildServer() {
       amount_cad: z.number().describe('Amount spent in CAD'),
       note: z.string().optional().describe('What was purchased or paid for'),
       entry_date: z.string().optional().describe('YYYY-MM-DD (defaults to today)'),
+      product_url: z.string().optional().describe('Link to the product page or order (e.g. Amazon, Home Depot)'),
     },
-    async ({ project_id, title_search, amount_cad, note, entry_date }) => {
+    async ({ project_id, title_search, amount_cad, note, entry_date, product_url }) => {
       let pid = project_id
       if (!pid) {
         if (!title_search) return text('Provide project_id or title_search.')
@@ -253,6 +254,7 @@ function buildServer() {
         amount_cad,
         note: note ?? null,
         entry_date: entry_date ?? new Date().toISOString().split('T')[0],
+        receipt_url: product_url ?? null,
       })
       if (error) throw new Error(error.message)
       return text(`Logged $${amount_cad} CAD${note ? ` — ${note}` : ''}`)
