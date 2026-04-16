@@ -105,7 +105,7 @@ function InlineTextarea({ value, onBlurSave, placeholder, rows = 3 }) {
   )
 }
 
-export default function ProjectDetail({ projectId, onClose }) {
+export default function ProjectDetail({ projectId, onClose, forceOverlay = false }) {
   const { data: project, isLoading } = useProject(projectId)
   const { data: properties = [] } = useProperties()
   const { data: roomTypes = [] } = useRoomTypes()
@@ -124,6 +124,13 @@ export default function ProjectDetail({ projectId, onClose }) {
   const [editingSpendId, setEditingSpendId] = useState(null)
   const [editSpendForm, setEditSpendForm] = useState({})
   const generateShareToken = useGenerateShareToken()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024)
+
+  useEffect(() => {
+    function check() { setIsDesktop(window.innerWidth >= 1024) }
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const [newSubtaskText, setNewSubtaskText] = useState('')
   const [spendForm, setSpendForm] = useState({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd'), link: '' })
@@ -220,16 +227,19 @@ export default function ProjectDetail({ projectId, onClose }) {
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-20 bg-black/40" onClick={onClose} />
+      {/* Backdrop — mobile only */}
+      {(!isDesktop || forceOverlay) && <div className="fixed inset-0 z-20 bg-black/40" onClick={onClose} />}
 
       {/* Panel */}
       <motion.div
-        initial={{ x: '100%' }}
-        animate={{ x: 0 }}
-        exit={{ x: '100%' }}
+        initial={(isDesktop && !forceOverlay) ? { opacity: 0, x: 24 } : { x: '100%' }}
+        animate={(isDesktop && !forceOverlay) ? { opacity: 1, x: 0 } : { x: 0 }}
+        exit={(isDesktop && !forceOverlay) ? { opacity: 0, x: 24 } : { x: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-        className="fixed right-0 top-0 h-full w-full sm:max-w-[460px] z-30 bg-bg-surface sm:border-l border-border flex flex-col shadow-2xl"
+        className={(isDesktop && !forceOverlay)
+          ? "w-[480px] xl:w-[540px] shrink-0 bg-bg-surface border-l border-border flex flex-col overflow-y-auto"
+          : "fixed right-0 top-0 h-full w-full sm:max-w-[460px] z-30 bg-bg-surface sm:border-l border-border flex flex-col shadow-2xl"
+        }
       >
         {isLoading || !project ? (
           <div className="flex-1 flex items-center justify-center">

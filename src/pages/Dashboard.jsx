@@ -256,7 +256,7 @@ export default function Dashboard() {
 
       <AnimatePresence>
         {detailProjectId && (
-          <ProjectDetail key={detailProjectId} projectId={detailProjectId} onClose={closeDetail} />
+          <ProjectDetail key={detailProjectId} projectId={detailProjectId} onClose={closeDetail} forceOverlay />
         )}
       </AnimatePresence>
 
