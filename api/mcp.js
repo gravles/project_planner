@@ -409,6 +409,38 @@ function buildServer() {
     },
   )
 
+  // ── append_note ───────────────────────────────────────────────────────────
+  server.tool(
+    'append_note',
+    'Append text to a project\'s notes without overwriting existing content. Safer than update_project for adding notes.',
+    {
+      id: z.string().optional().describe('Project UUID (preferred)'),
+      title_search: z.string().optional().describe('Search by title substring'),
+      text: z.string().describe('Text to append to the notes'),
+    },
+    async ({ id, title_search, text: newText }) => {
+      let projectId = id
+      if (!projectId) {
+        if (!title_search) return text('Provide id or title_search.')
+        const resolved = await resolveProject(sb, title_search)
+        if (resolved.error) return text(resolved.error)
+        projectId = resolved.id
+      }
+      const { data, error: fetchErr } = await sb
+        .from('projects')
+        .select('notes, title')
+        .eq('id', projectId)
+        .single()
+      if (fetchErr) throw new Error(fetchErr.message)
+      const date = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
+      const separator = data.notes?.trim() ? '\n\n' : ''
+      const updated = `${data.notes?.trim() ?? ''}${separator}[${date}] ${newText.trim()}`
+      const { error } = await sb.from('projects').update({ notes: updated }).eq('id', projectId)
+      if (error) throw new Error(error.message)
+      return text(`Note appended to "${data.title}".`)
+    },
+  )
+
   // ── generate_share_link ───────────────────────────────────────────────────
   server.tool(
     'generate_share_link',
