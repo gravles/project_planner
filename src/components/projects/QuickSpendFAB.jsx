@@ -98,7 +98,6 @@ export default function QuickSpendFAB() {
               ref={receiptInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={handleReceiptScan}
             />

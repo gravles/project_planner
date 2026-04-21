@@ -498,7 +498,6 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   ref={receiptInputRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   className="hidden"
                   onChange={handleReceiptScan}
                 />
