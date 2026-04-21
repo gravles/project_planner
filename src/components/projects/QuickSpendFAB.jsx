@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { format } from 'date-fns'
 import { useProjects, useAddSpend } from '../../hooks/useProjects'
+import { parseReceiptImage } from '../../lib/anthropic'
+import { toast } from '../../stores/toastStore'
 
 export default function QuickSpendFAB() {
   const [open, setOpen] = useState(false)
@@ -10,8 +12,34 @@ export default function QuickSpendFAB() {
   const [link, setLink] = useState('')
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
 
+  const [receiptScanning, setReceiptScanning] = useState(false)
+  const receiptInputRef = useRef(null)
+
   const { data: projects = [] } = useProjects()
   const addSpend = useAddSpend()
+
+  async function handleReceiptScan(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setReceiptScanning(true)
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      const result = await parseReceiptImage(base64, file.type)
+      if (result.amount_cad) setAmount(String(result.amount_cad))
+      if (result.note) setNote(result.note)
+      if (result.date) setDate(result.date)
+    } catch {
+      toast.error('Could not read receipt. Try a clearer photo.')
+    } finally {
+      setReceiptScanning(false)
+      if (receiptInputRef.current) receiptInputRef.current.value = ''
+    }
+  }
 
   const sorted = [...projects].sort((a, b) => {
     const order = { 'In Progress': 0, 'Blocked': 1, 'Backlog': 2, 'Done': 3 }
@@ -65,13 +93,41 @@ export default function QuickSpendFAB() {
             {/* Handle */}
             <div className="w-10 h-1 rounded-full bg-border mx-auto mb-1" />
 
+            {/* Hidden file input for receipt scanning */}
+            <input
+              ref={receiptInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleReceiptScan}
+            />
+
             <div className="flex items-center justify-between">
               <h3 className="font-display text-base font-bold text-text-primary">Log Spend</h3>
-              <button onClick={handleClose} className="text-text-muted hover:text-text-primary p-1 -mr-1">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => receiptInputRef.current?.click()}
+                  disabled={receiptScanning}
+                  className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors disabled:opacity-50"
+                >
+                  {receiptScanning ? (
+                    <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" /></svg>
+                  ) : (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                  )}
+                  {receiptScanning ? 'Scanning…' : 'Scan receipt'}
+                </button>
+                <button onClick={handleClose} className="text-text-muted hover:text-text-primary p-1 -mr-1">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
