@@ -13,6 +13,7 @@ import Vendors from './pages/Vendors'
 import Reports from './pages/Reports'
 import ShareView from './pages/ShareView'
 import Toast from './components/ui/Toast'
+import InstallPrompt from './components/ui/InstallPrompt'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +75,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toast />
+        <InstallPrompt />
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>

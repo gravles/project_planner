@@ -21,6 +21,7 @@ import { useRoomTypes, useCreateRoomType } from '../../hooks/useAdmin'
 import Combobox from '../ui/Combobox'
 import TagPicker from '../ui/TagPicker'
 import PhotoGallery from './PhotoGallery'
+import AttachmentsList from './AttachmentsList'
 import AiBudgetEstimator from './AiBudgetEstimator'
 import AiTimeEstimator from './AiTimeEstimator'
 import RecurrencePanel from './RecurrencePanel'
@@ -695,6 +696,9 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                 <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">Photos</p>
                 <PhotoGallery projectId={projectId} />
               </div>
+
+              {/* ── Attachments ── */}
+              <AttachmentsList projectId={projectId} />
 
               {/* ── Recurrence ── */}
               <div>

@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <!-- House silhouette mask -->
+    <mask id="house" maskUnits="userSpaceOnUse">
+      <!-- Outer house: roof + walls -->
+      <path fill="white" d="
+        M256 52
+        L36  252
+        L92  252
+        L92  460
+        L420 460
+        L420 252
+        L476 252
+        Z
+      "/>
+    </mask>
+
+    <!-- Shared blur filters -->
+    <filter id="blur-80" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="80"/>
+    </filter>
+    <filter id="blur-55" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="55"/>
+    </filter>
+    <filter id="blur-40" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+    <filter id="blur-28" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+  </defs>
+
+  <!-- Base purple fill clipped to house -->
+  <path fill="#863bff" d="M256 52 L36 252 L92 252 L92 460 L420 460 L420 252 L476 252 Z"/>
+
+  <!-- Glassmorphism glow layers — all masked to house silhouette -->
+  <g mask="url(#house)">
+
+    <!-- Deep purple shadow — bottom-left wall -->
+    <ellipse cx="100" cy="400" rx="180" ry="120"
+      fill="#5a00cc" filter="url(#blur-80)"/>
+
+    <!-- Deep purple shadow — bottom-right wall -->
+    <ellipse cx="420" cy="420" rx="140" ry="100"
+      fill="#5a00cc" filter="url(#blur-80)"/>
+
+    <!-- Large lavender highlight — upper-left (light source) -->
+    <ellipse cx="150" cy="180" rx="200" ry="100"
+      fill="#ede6ff" filter="url(#blur-80)" opacity="0.7"
+      transform="rotate(-15 150 180)"/>
+
+    <!-- Secondary lavender — mid roof -->
+    <ellipse cx="260" cy="140" rx="160" ry="60"
+      fill="#d8ccff" filter="url(#blur-55)" opacity="0.5"
+      transform="rotate(5 260 140)"/>
+
+    <!-- Cyan streak — upper-right (accent highlight) -->
+    <ellipse cx="390" cy="130" rx="80" ry="140"
+      fill="#47bfff" filter="url(#blur-55)" opacity="0.55"
+      transform="rotate(30 390 130)"/>
+
+    <!-- Cyan secondary — right wall -->
+    <ellipse cx="430" cy="340" rx="60" ry="100"
+      fill="#47bfff" filter="url(#blur-40)" opacity="0.4"
+      transform="rotate(20 430 340)"/>
+
+    <!-- Amber warm accent — center body (app theme color) -->
+    <ellipse cx="256" cy="340" rx="130" ry="70"
+      fill="#f59e0b" filter="url(#blur-55)" opacity="0.28"/>
+
+    <!-- Bright lavender specular — roof ridge -->
+    <ellipse cx="256" cy="180" rx="80" ry="30"
+      fill="#ede6ff" filter="url(#blur-28)" opacity="0.6"
+      transform="rotate(-18 256 180)"/>
+
+    <!-- Deep indigo center shadow for depth -->
+    <ellipse cx="256" cy="300" rx="100" ry="180"
+      fill="#3d0099" filter="url(#blur-80)" opacity="0.45"/>
+
+  </g>
+</svg>
