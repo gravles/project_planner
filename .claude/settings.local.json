@@ -20,7 +20,13 @@
       "Bash(xargs basename *)",
       "WebFetch(domain:nathandavie.com)",
       "Bash(node -e \"require\\('@resvg/resvg-js'\\); console.log\\('ok'\\)\")",
-      "Bash(node scripts/generate-icons.js)"
+      "Bash(node scripts/generate-icons.js)",
+      "Bash(xxd)",
+      "Bash(xxd /Users/nathandavie/Library/CloudStorage/OneDrive-Personal/Apps/project_planner/.gitignore)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git reset *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
