@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useProjectPhotos, useUploadPhoto, useDeletePhoto } from '../../hooks/usePhotos'
-import { getRoomRecommendations } from '../../lib/anthropic'
+import { getRoomRecommendations, compareBeforeAfter } from '../../lib/anthropic'
 import { cn } from '../../lib/utils'
 
 const TABS = ['before', 'progress', 'after']
@@ -129,6 +129,117 @@ function AiRecommendations({ project, photos }) {
   )
 }
 
+function BeforeAfterCompare({ project, beforePhotos, afterPhotos }) {
+  const [beforeIdx, setBeforeIdx] = useState(0)
+  const [afterIdx, setAfterIdx] = useState(0)
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function compare() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await compareBeforeAfter(project, beforePhotos[beforeIdx], afterPhotos[afterIdx])
+      setResult(res)
+    } catch {
+      setError('Could not compare photos. Try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-bg-elevated p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Before / After Compare</p>
+        <button
+          onClick={compare}
+          disabled={loading}
+          className="text-xs text-accent hover:text-amber-300 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
+              </svg>
+              Comparing…
+            </>
+          ) : result ? 'Re-compare' : 'Compare'}
+        </button>
+      </div>
+
+      {/* Photo selectors when there are multiple in either category */}
+      <div className="flex gap-3 mb-3">
+        <div className="flex-1">
+          <p className="text-[10px] text-text-muted mb-1.5">Before</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {beforePhotos.map((p, i) => (
+              <img
+                key={p.id}
+                src={p.url}
+                alt=""
+                onClick={() => setBeforeIdx(i)}
+                className={cn('w-12 h-12 object-cover rounded cursor-pointer transition-all', beforeIdx === i ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-80')}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] text-text-muted mb-1.5">After</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {afterPhotos.map((p, i) => (
+              <img
+                key={p.id}
+                src={p.url}
+                alt=""
+                onClick={() => setAfterIdx(i)}
+                className={cn('w-12 h-12 object-cover rounded cursor-pointer transition-all', afterIdx === i ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-80')}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      {!result && !loading && !error && (
+        <p className="text-xs text-text-muted">Select one photo from each side then hit Compare.</p>
+      )}
+
+      {result && (
+        <div className="space-y-3 mt-1">
+          <p className="text-sm text-text-secondary leading-relaxed">{result.summary}</p>
+          {result.completed?.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-green-500 uppercase tracking-wider mb-1">Completed</p>
+              <ul className="space-y-1">
+                {result.completed.map((c, i) => (
+                  <li key={i} className="flex gap-2 text-xs text-text-secondary">
+                    <span className="text-green-500 shrink-0">✓</span>{c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {result.outstanding?.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider mb-1">Still Outstanding</p>
+              <ul className="space-y-1">
+                {result.outstanding.map((o, i) => (
+                  <li key={i} className="flex gap-2 text-xs text-text-secondary">
+                    <span className="text-amber-500 shrink-0">→</span>{o}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PhotoGallery({ projectId, project }) {
   const { data: allPhotos = [] } = useProjectPhotos(projectId)
   const uploadPhoto = useUploadPhoto()
@@ -218,6 +329,19 @@ export default function PhotoGallery({ projectId, project }) {
       {allPhotos.length > 0 && project && (
         <AiRecommendations project={project} photos={allPhotos} />
       )}
+
+      {/* Before/After Compare — only shown when both types exist */}
+      {(() => {
+        const beforePhotos = allPhotos.filter(p => p.photo_type === 'before')
+        const afterPhotos = allPhotos.filter(p => p.photo_type === 'after')
+        return beforePhotos.length > 0 && afterPhotos.length > 0 && project ? (
+          <BeforeAfterCompare
+            project={project}
+            beforePhotos={beforePhotos}
+            afterPhotos={afterPhotos}
+          />
+        ) : null
+      })()}
 
       {lightbox && (
         <Lightbox

@@ -26,7 +26,8 @@ import AiBudgetEstimator from './AiBudgetEstimator'
 import AiTimeEstimator from './AiTimeEstimator'
 import RecurrencePanel from './RecurrencePanel'
 import SharePanel from './SharePanel'
-import { getProjectSuggestions, parseReceiptImage } from '../../lib/anthropic'
+import { getProjectSuggestions, parseReceiptImage, generateMaterialList } from '../../lib/anthropic'
+import { useAddShoppingItems } from '../../hooks/useShoppingList'
 import { toast } from '../../stores/toastStore'
 import {
   cn,
@@ -140,6 +141,11 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
   const receiptInputRef = useRef(null)
   const [aiSuggestions, setAiSuggestions] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
+  const [materialItems, setMaterialItems] = useState(null)
+  const [materialLoading, setMaterialLoading] = useState(false)
+  const [materialExcluded, setMaterialExcluded] = useState(new Set())
+  const [materialAdded, setMaterialAdded] = useState(false)
+  const addShoppingItems = useAddShoppingItems()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const subtaskInputRef = useRef(null)
 
@@ -219,6 +225,30 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
     } finally {
       setAiLoading(false)
     }
+  }
+
+  async function fetchMaterials() {
+    if (!project) return
+    setMaterialLoading(true)
+    setMaterialItems(null)
+    setMaterialExcluded(new Set())
+    setMaterialAdded(false)
+    try {
+      const items = await generateMaterialList(project)
+      setMaterialItems(items)
+    } catch {
+      setMaterialItems([])
+    } finally {
+      setMaterialLoading(false)
+    }
+  }
+
+  async function addMaterialsToList() {
+    if (!materialItems) return
+    const toAdd = materialItems.filter((_, i) => !materialExcluded.has(i))
+    if (!toAdd.length) return
+    await addShoppingItems.mutateAsync({ items: toAdd, projectId })
+    setMaterialAdded(true)
   }
 
   const spent = project?.spend_entries?.reduce((s, e) => s + Number(e.amount_cad), 0) ?? 0
@@ -737,6 +767,80 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                       </li>
                     ))}
                   </ul>
+                )}
+              </div>
+
+              {/* ── Materials ── */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Materials</p>
+                  <button
+                    onClick={fetchMaterials}
+                    disabled={materialLoading}
+                    className="text-xs text-accent hover:text-amber-300 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {materialLoading ? (
+                      <>
+                        <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
+                        </svg>
+                        Generating…
+                      </>
+                    ) : materialItems ? 'Regenerate' : 'Generate list'}
+                  </button>
+                </div>
+
+                {materialItems && materialItems.length === 0 && (
+                  <p className="text-xs text-text-muted">No materials identified — try adding more notes or subtasks.</p>
+                )}
+
+                {materialItems && materialItems.length > 0 && (
+                  <div className="space-y-1.5">
+                    {materialItems.map((item, i) => (
+                      <label
+                        key={i}
+                        className={cn(
+                          'flex items-center gap-2.5 text-sm cursor-pointer rounded-lg px-2 py-1.5 hover:bg-bg-elevated transition-colors',
+                          materialExcluded.has(i) && 'opacity-40'
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!materialExcluded.has(i)}
+                          onChange={e => {
+                            setMaterialExcluded(prev => {
+                              const next = new Set(prev)
+                              e.target.checked ? next.delete(i) : next.add(i)
+                              return next
+                            })
+                            setMaterialAdded(false)
+                          }}
+                          className="accent-amber-400"
+                        />
+                        {item.quantity && (
+                          <span className="text-xs text-text-muted shrink-0 w-10 text-right">{item.quantity}</span>
+                        )}
+                        <span className="text-text-secondary">{item.text}</span>
+                      </label>
+                    ))}
+                    <div className="pt-2">
+                      {materialAdded ? (
+                        <p className="text-xs text-green-500 flex items-center gap-1.5">
+                          <span>✓</span> Added to shopping list
+                        </p>
+                      ) : (
+                        <button
+                          onClick={addMaterialsToList}
+                          disabled={addShoppingItems.isPending || materialExcluded.size === materialItems.length}
+                          className="text-xs text-accent hover:text-amber-300 transition-colors disabled:opacity-40"
+                        >
+                          {addShoppingItems.isPending
+                            ? 'Adding…'
+                            : `Add ${materialItems.length - materialExcluded.size} item${materialItems.length - materialExcluded.size !== 1 ? 's' : ''} to shopping list →`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 

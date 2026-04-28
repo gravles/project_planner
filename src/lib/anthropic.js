@@ -118,6 +118,56 @@ If the total is ambiguous, use the largest amount. JSON only, no markdown.`,
   return JSON.parse(raw.replace(/```json|```/g, '').trim())
 }
 
+export async function generateMaterialList(project) {
+  const data = await callClaude({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 800,
+    system: `You are a home renovation materials expert for the Ottawa, Canada market.
+Given a project's details, generate a comprehensive shopping list of materials still needed.
+Include specific quantities where relevant (e.g. "2 boxes", "1 gallon", "6 ft").
+Focus on remaining work — don't list things the subtasks show are already done.
+Return ONLY a JSON array of objects: [{ "text": string, "quantity": string | null }]
+Max 12 items. Be specific (brand/type where it matters). JSON only.`,
+    messages: [{ role: 'user', content: JSON.stringify({
+      title: project.title,
+      room: project.room,
+      status: project.status,
+      notes: project.notes,
+      subtasks: project.subtasks?.map(s => ({ text: s.text, done: s.done })),
+      vendor: project.vendor,
+    }) }],
+  })
+  const raw = data.content?.find(b => b.type === 'text')?.text || '[]'
+  return JSON.parse(raw.replace(/```json|```/g, '').trim())
+}
+
+export async function compareBeforeAfter(project, beforePhoto, afterPhoto) {
+  const data = await callClaude({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 700,
+    system: `You are an expert home renovation advisor. You will be shown a BEFORE photo and an AFTER photo of a renovation project along with its details. Compare the two images carefully.
+Return ONLY a valid JSON object:
+{
+  "summary": "2-3 sentence overall progress assessment written for the homeowner",
+  "completed": ["specific visible change 1", ...],
+  "outstanding": ["specific thing still visibly unfinished or missing", ...]
+}
+Be specific about what you actually observe in the photos — don't guess at things not visible. JSON only.`,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: 'BEFORE:' },
+        { type: 'image', source: { type: 'url', url: beforePhoto.url } },
+        { type: 'text', text: 'AFTER:' },
+        { type: 'image', source: { type: 'url', url: afterPhoto.url } },
+        { type: 'text', text: `Project: ${JSON.stringify({ title: project.title, room: project.room, status: project.status, notes: project.notes })}` },
+      ],
+    }],
+  })
+  const raw = data.content?.find(b => b.type === 'text')?.text || '{}'
+  return JSON.parse(raw.replace(/```json|```/g, '').trim())
+}
+
 export async function getRoomRecommendations(project, photos) {
   // Build content blocks: up to 5 photos across all types, then the full project context
   const photoBlocks = photos.slice(0, 5).map(p => ({

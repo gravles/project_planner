@@ -12,6 +12,7 @@ import Admin from './pages/Admin'
 import Vendors from './pages/Vendors'
 import Reports from './pages/Reports'
 import ShareView from './pages/ShareView'
+import ShoppingList from './pages/ShoppingList'
 import Toast from './components/ui/Toast'
 import InstallPrompt from './components/ui/InstallPrompt'
 
@@ -68,6 +69,14 @@ createRoot(document.getElementById('root')).render(
             element={
               <ProtectedRoute>
                 <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shopping"
+            element={
+              <ProtectedRoute>
+                <ShoppingList />
               </ProtectedRoute>
             }
           />
