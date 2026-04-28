@@ -118,6 +118,47 @@ If the total is ambiguous, use the largest amount. JSON only, no markdown.`,
   return JSON.parse(raw.replace(/```json|```/g, '').trim())
 }
 
+export async function getRoomRecommendations(project, photos) {
+  // Build content blocks: up to 5 photos across all types, then the full project context
+  const photoBlocks = photos.slice(0, 5).map(p => ({
+    type: 'image',
+    source: { type: 'url', url: p.url },
+  }))
+
+  const context = {
+    title: project.title,
+    room: project.room,
+    property: project.property,
+    status: project.status,
+    priority: project.priority,
+    notes: project.notes,
+    vendor: project.vendor,
+    estimate_cad: project.estimate_cad,
+    subtasks: project.subtasks?.map(s => ({ text: s.text, done: s.done })),
+    photo_types: photos.map(p => p.photo_type),
+  }
+
+  const data = await callClaude({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 800,
+    system: `You are an expert home renovation advisor helping a homeowner in Ottawa, Canada.
+You will be shown photos of a room renovation project along with its full details.
+Analyze what you see and the project context together to give 4-5 specific, practical recommendations.
+Focus on: what's visibly missing or unfinished, smart next purchases, common oversights for this room type, and anything that could prevent future problems.
+Be concrete — name actual products, materials, or steps. Keep each point to 1-2 sentences.
+Return ONLY a JSON array of strings. No markdown.`,
+    messages: [{
+      role: 'user',
+      content: [
+        ...photoBlocks,
+        { type: 'text', text: `Project details: ${JSON.stringify(context)}` },
+      ],
+    }],
+  })
+  const raw = data.content?.find(b => b.type === 'text')?.text || '[]'
+  return JSON.parse(raw.replace(/```json|```/g, '').trim())
+}
+
 export async function generateWeeklySummary(projects) {
   const data = await callClaude({
     model: 'claude-sonnet-4-20250514',

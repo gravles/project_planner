@@ -26,7 +26,10 @@
       "Bash(git add *)",
       "Bash(git rm *)",
       "Bash(git reset *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(npm run *)",
+      "Read(//tmp/**)",
+      "Bash(node *)"
     ]
   }
 }

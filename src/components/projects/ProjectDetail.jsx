@@ -694,7 +694,7 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
               {/* ── Photos ── */}
               <div>
                 <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">Photos</p>
-                <PhotoGallery projectId={projectId} />
+                <PhotoGallery projectId={projectId} project={project} />
               </div>
 
               {/* ── Attachments ── */}
