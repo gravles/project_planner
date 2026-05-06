@@ -29,7 +29,14 @@
       "Bash(git commit -m ' *)",
       "Bash(npm run *)",
       "Read(//tmp/**)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(npm --version)",
+      "Bash(git --version)",
+      "Bash(npm list *)",
+      "PowerShell(Test-Path *)",
+      "Bash(echo \"EXIT:$?\")",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\natha\\\\OneDrive\\\\Apps\\\\project_planner\"; $proc = Start-Process -FilePath \"node\" -ArgumentList \"./node_modules/vitest/vitest.mjs run --reporter=verbose\" -RedirectStandardOutput \"C:\\\\Temp\\\\vitest-out.txt\" -RedirectStandardError \"C:\\\\Temp\\\\vitest-err.txt\" -Wait -PassThru -NoNewWindow; $out = Get-Content \"C:\\\\Temp\\\\vitest-out.txt\" -Raw -ErrorAction SilentlyContinue; $err = Get-Content \"C:\\\\Temp\\\\vitest-err.txt\" -Raw -ErrorAction SilentlyContinue; Write-Output \"=STDOUT=\"; Write-Output $out; Write-Output \"=STDERR=\"; Write-Output $err; Write-Output \"EXIT: $\\($proc.ExitCode\\)\")"
     ]
   }
 }
