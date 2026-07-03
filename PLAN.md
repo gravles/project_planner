@@ -1,12 +1,13 @@
 # Project Planner — Improvement & Feature Plan
 
-> **STATUS (2026-07-03): all phases implemented** on branch `claude/wizardly-lamarr-5c47a2`
-> (commits `920bd4a` → `1fdd626`). Database migrations 007 and 009–014 are already applied
-> to the live Supabase project. Remaining manual steps before/after merging to `main`:
+> **STATUS (2026-07-03): all phases implemented, merged to `main`, and deployed**
+> (commits `920bd4a` → `ad994e0`). All database migrations (007–014, including the
+> deferred `008_private_bucket.sql`) are applied to the live Supabase project; the
+> storage bucket is private and production endpoints verified failing closed.
+> Remaining manual steps:
 > 1. Supabase Dashboard → Authentication → disable "Allow new users to sign up" (0.1).
 > 2. Vercel env vars: add `MCP_AUTHORIZE_PASSWORD`, `CRON_SECRET`, `RESEND_API_KEY`,
 >    `DIGEST_TO_EMAIL` (and optionally `EMAIL_FROM` for a verified Resend domain).
-> 3. Merge → deploy → **then** apply `008_private_bucket.sql` (see note in that file).
 > Implementation deviations from the plan are noted in the commit messages (e.g. migration
 > numbering shifted by one: 011 = notification_log, 012 = documents).
 
