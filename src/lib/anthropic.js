@@ -104,11 +104,13 @@ export async function parseReceiptImage(base64Data, mimeType = 'image/jpeg') {
   const data = await callClaude({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 300,
-    system: `You are a receipt parser. Extract the key details from the receipt image and return ONLY a valid JSON object:
+    system: `You are a receipt parser for a home renovation tracker. Extract the key details from the receipt image and return ONLY a valid JSON object:
 {
   "amount_cad": number (total amount as a number, no dollar sign),
   "date": "YYYY-MM-DD or null if not visible",
-  "note": "Merchant name and brief description of what was purchased, max 60 chars"
+  "note": "Merchant name and brief description of what was purchased, max 60 chars",
+  "category": "materials" | "labour" | "permits_fees" | "tools" | "appliances" | "maintenance_repair" | "insurance" | "utilities" | "other",
+  "expense_type": "capital" | "current" | null (capital = improves/upgrades the property, current = repair/maintenance/consumable; null if unclear)
 }
 If the total is ambiguous, use the largest amount. JSON only, no markdown.`,
     messages: [{

@@ -17,8 +17,9 @@ export function useCreateVendor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (fields) => {
-      const { error } = await supabase.from('vendors').insert(fields)
+      const { data, error } = await supabase.from('vendors').insert(fields).select().single()
       if (error) throw error
+      return data
     },
     onSuccess: () => {
       toast.success('Vendor added')

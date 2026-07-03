@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/layout/AppShell'
 import { useProjects } from '../hooks/useProjects'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '../hooks/useVendors'
-import { cn } from '../lib/utils'
+import { useUIStore } from '../stores/uiStore'
+import { cn, STATUS_COLORS } from '../lib/utils'
 
 function VendorForm({ initial = {}, onSave, onCancel, saveLabel = 'Save' }) {
   const [form, setForm] = useState({ name: '', phone: '', email: '', website: '', notes: '', ...initial })
@@ -44,6 +46,8 @@ function VendorForm({ initial = {}, onSave, onCancel, saveLabel = 'Save' }) {
 }
 
 export default function Vendors() {
+  const navigate = useNavigate()
+  const { openDetail } = useUIStore()
   const { data: projects = [] } = useProjects()
   const { data: vendors = [] } = useVendors()
   const createVendor = useCreateVendor()
@@ -234,18 +238,25 @@ export default function Vendors() {
                     {selectedProjects.map(p => {
                       const spend = p.spend_entries?.reduce((a, e) => a + Number(e.amount_cad), 0) ?? 0
                       return (
-                        <div key={p.id} className="flex items-center gap-3 px-3 py-2 bg-bg-surface border border-border rounded-xl">
+                        <button
+                          key={p.id}
+                          onClick={() => { navigate('/'); openDetail(p.id) }}
+                          className="w-full flex items-center gap-3 px-3 py-2 bg-bg-surface border border-border rounded-xl text-left hover:border-border-hover transition-colors"
+                        >
                           {p.properties && (
                             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.properties.color }} />
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-text-primary truncate">{p.title}</p>
-                            <p className="text-xs text-text-muted">{p.status} · {p.room}</p>
+                            <p className="text-xs text-text-muted">{p.room}</p>
                           </div>
+                          <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0', STATUS_COLORS[p.status])}>
+                            {p.status}
+                          </span>
                           {spend > 0 && (
                             <span className="text-xs text-text-secondary shrink-0">${spend.toLocaleString()}</span>
                           )}
-                        </div>
+                        </button>
                       )
                     })}
                   </div>

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProperties } from '../../hooks/useProperties'
 import { useRoomTypes, useCreateRoomType } from '../../hooks/useAdmin'
+import { useVendors, useCreateVendor } from '../../hooks/useVendors'
+import { supabase } from '../../lib/supabase'
 import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../../lib/utils'
 import Combobox from '../ui/Combobox'
 import TagPicker from '../ui/TagPicker'
@@ -21,6 +23,8 @@ const DEFAULT_FORM = {
 export default function NewProjectModal({ open, onClose, onCreate, initialData = null }) {
   const { data: properties = [] } = useProperties()
   const { data: roomTypes = [] } = useRoomTypes()
+  const { data: vendors = [] } = useVendors()
+  const createVendor = useCreateVendor()
   const createRoomType = useCreateRoomType()
   const [form, setForm] = useState(() => ({ ...DEFAULT_FORM, ...initialData }))
   const [subtasks, setSubtasks] = useState(initialData?.subtasks ?? [])
@@ -47,6 +51,19 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
     if (!form.title.trim()) return
     setSaving(true)
     try {
+      // Resolve the vendor name to its record (covers just-created vendors
+      // that aren't in the cached list yet)
+      const vendorName = form.vendor?.trim() || null
+      let vendorId = null
+      if (vendorName) {
+        const match = vendors.find(v => v.name.toLowerCase() === vendorName.toLowerCase())
+        if (match) {
+          vendorId = match.id
+        } else {
+          const { data } = await supabase.from('vendors').select('id').ilike('name', vendorName).limit(1)
+          vendorId = data?.[0]?.id ?? null
+        }
+      }
       await onCreate({
         project: {
           title: form.title.trim(),
@@ -56,7 +73,8 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
           priority: form.priority,
           due_date: form.due_date || null,
           estimate_cad: form.estimate_cad ? Number(form.estimate_cad) : 0,
-          vendor: form.vendor?.trim() || null,
+          vendor: vendorName,
+          vendor_id: vendorId,
           notes: form.notes?.trim() || null,
         },
         subtasks: subtasks.filter(s => s.text?.trim()),
@@ -173,7 +191,13 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
                 {/* Vendor */}
                 <div>
                   <label className="block text-xs text-text-muted mb-1.5">Vendor / Contractor</label>
-                  <input type="text" value={form.vendor} onChange={e => set('vendor', e.target.value)} placeholder="e.g. Home Depot, John's Plumbing" className={inputCls} />
+                  <Combobox
+                    value={form.vendor}
+                    onChange={v => set('vendor', v)}
+                    options={vendors.map(v => v.name)}
+                    onCreate={name => createVendor.mutateAsync({ name })}
+                    placeholder="e.g. Home Depot, John's Plumbing"
+                  />
                 </div>
 
                 {/* Tags */}

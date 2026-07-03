@@ -17,6 +17,8 @@ import {
 } from '../../hooks/useProjects'
 import { useSaveAsTemplate } from '../../hooks/useTemplates'
 import { useProperties } from '../../hooks/useProperties'
+import { useVendors, useCreateVendor } from '../../hooks/useVendors'
+import { supabase } from '../../lib/supabase'
 import { useRoomTypes, useCreateRoomType } from '../../hooks/useAdmin'
 import Combobox from '../ui/Combobox'
 import TagPicker from '../ui/TagPicker'
@@ -37,6 +39,8 @@ import {
   PRIORITY_OPTIONS,
   STATUS_COLORS,
   PRIORITY_COLORS,
+  SPEND_CATEGORIES,
+  SPEND_CATEGORY_LABELS,
 } from '../../lib/utils'
 
 function formatHours(h) {
@@ -122,6 +126,8 @@ function InlineTextarea({ value, onBlurSave, placeholder, rows = 3 }) {
 export default function ProjectDetail({ projectId, onClose, forceOverlay = false }) {
   const { data: project, isLoading } = useProject(projectId)
   const { data: properties = [] } = useProperties()
+  const { data: vendors = [] } = useVendors()
+  const createVendor = useCreateVendor()
   const { data: roomTypes = [] } = useRoomTypes()
   const createRoomType = useCreateRoomType()
   const updateProject = useUpdateProject()
@@ -147,7 +153,7 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
   }, [])
 
   const [newSubtaskText, setNewSubtaskText] = useState('')
-  const [spendForm, setSpendForm] = useState({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd'), link: '' })
+  const [spendForm, setSpendForm] = useState({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd'), link: '', category: 'other', expense_type: '' })
   const [spendOpen, setSpendOpen] = useState(false)
   const [receiptScanning, setReceiptScanning] = useState(false)
   const receiptInputRef = useRef(null)
@@ -169,6 +175,23 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
     updateProject.mutate({ id: projectId, [field]: value })
   }
 
+  // Keeps the denormalized vendor text and the vendor_id FK in sync.
+  // Falls back to a DB lookup for vendors created moments ago (cache lag).
+  async function saveVendor(name) {
+    const trimmed = name?.trim() || null
+    let vendorId = null
+    if (trimmed) {
+      const match = vendors.find(v => v.name.toLowerCase() === trimmed.toLowerCase())
+      if (match) {
+        vendorId = match.id
+      } else {
+        const { data } = await supabase.from('vendors').select('id').ilike('name', trimmed).limit(1)
+        vendorId = data?.[0]?.id ?? null
+      }
+    }
+    updateProject.mutate({ id: projectId, vendor: trimmed, vendor_id: vendorId })
+  }
+
   async function handleAddSubtask(e) {
     e?.preventDefault()
     if (!newSubtaskText.trim()) return
@@ -187,8 +210,10 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
       note: spendForm.note || null,
       entry_date: spendForm.date,
       receipt_url: spendForm.link || null,
+      category: spendForm.category,
+      expense_type: spendForm.expense_type || null,
     })
-    setSpendForm({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd'), link: '' })
+    setSpendForm({ amount: '', note: '', date: format(new Date(), 'yyyy-MM-dd'), link: '', category: 'other', expense_type: '' })
     setSpendOpen(false)
   }
 
@@ -212,9 +237,12 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
       })
       const result = await parseReceiptImage(base64, file.type)
       setSpendForm(f => ({
+        ...f,
         amount: result.amount_cad ? String(result.amount_cad) : f.amount,
         note:   result.note  ?? f.note,
         date:   result.date  ?? f.date,
+        category: SPEND_CATEGORIES.includes(result.category) ? result.category : f.category,
+        expense_type: ['capital', 'current'].includes(result.expense_type) ? result.expense_type : f.expense_type,
       }))
     } catch {
       toast.error('Could not read receipt. Try a clearer photo.')
@@ -375,9 +403,11 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   />
                 </Field>
                 <Field label="Vendor">
-                  <InlineInput
+                  <Combobox
                     value={project.vendor ?? ''}
-                    onBlurSave={v => save('vendor', v)}
+                    onChange={saveVendor}
+                    options={vendors.map(v => v.name)}
+                    onCreate={name => createVendor.mutateAsync({ name })}
                     placeholder="—"
                   />
                 </Field>
@@ -608,6 +638,25 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                       placeholder="Product link (optional)"
                       className="w-full bg-bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                     />
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={spendForm.category}
+                        onChange={e => setSpendForm(f => ({ ...f, category: e.target.value }))}
+                        className="bg-bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                      >
+                        {SPEND_CATEGORIES.map(c => <option key={c} value={c}>{SPEND_CATEGORY_LABELS[c]}</option>)}
+                      </select>
+                      <select
+                        value={spendForm.expense_type}
+                        onChange={e => setSpendForm(f => ({ ...f, expense_type: e.target.value }))}
+                        title="Capital = improves the property (depreciated). Current = repair/upkeep (deducted in-year). Confirm with your accountant."
+                        className="bg-bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                      >
+                        <option value="">Tax type: unclassified</option>
+                        <option value="capital">Capital (improvement)</option>
+                        <option value="current">Current (repair/upkeep)</option>
+                      </select>
+                    </div>
                     <button
                       type="submit"
                       className="w-full py-1.5 rounded-lg text-sm font-semibold bg-accent hover:bg-amber-400 text-bg-base transition-colors"
@@ -654,6 +703,24 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                             placeholder="Product link (optional)"
                             className="w-full bg-bg-base border border-border rounded-lg px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                           />
+                          <div className="grid grid-cols-2 gap-2">
+                            <select
+                              value={editSpendForm.category ?? 'other'}
+                              onChange={e => setEditSpendForm(f => ({ ...f, category: e.target.value }))}
+                              className="bg-bg-base border border-border rounded-lg px-2.5 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                            >
+                              {SPEND_CATEGORIES.map(c => <option key={c} value={c}>{SPEND_CATEGORY_LABELS[c]}</option>)}
+                            </select>
+                            <select
+                              value={editSpendForm.expense_type ?? ''}
+                              onChange={e => setEditSpendForm(f => ({ ...f, expense_type: e.target.value }))}
+                              className="bg-bg-base border border-border rounded-lg px-2.5 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                            >
+                              <option value="">Tax type: unclassified</option>
+                              <option value="capital">Capital (improvement)</option>
+                              <option value="current">Current (repair/upkeep)</option>
+                            </select>
+                          </div>
                           <div className="flex gap-2">
                             <button
                               onClick={async () => {
@@ -664,6 +731,8 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                                   note: editSpendForm.note,
                                   entry_date: editSpendForm.date,
                                   receipt_url: editSpendForm.link,
+                                  category: editSpendForm.category,
+                                  expense_type: editSpendForm.expense_type || null,
                                 })
                                 setEditingSpendId(null)
                               }}
@@ -686,7 +755,19 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                         <span className="text-sm font-semibold text-text-primary w-20 shrink-0">
                           ${Number(entry.amount_cad).toLocaleString()}
                         </span>
-                        <span className="flex-1 text-xs text-text-muted truncate">{entry.note || '—'}</span>
+                        <span className="flex-1 text-xs text-text-muted truncate">
+                          {entry.note || '—'}
+                          {entry.category && entry.category !== 'other' && (
+                            <span className="ml-1.5 text-[10px] text-text-muted/80 bg-bg-elevated px-1 py-0.5 rounded">
+                              {SPEND_CATEGORY_LABELS[entry.category] ?? entry.category}
+                            </span>
+                          )}
+                          {!entry.expense_type && (
+                            <span title="Not yet classified capital vs current for tax purposes" className="ml-1.5 text-[10px] text-accent/70">
+                              tax?
+                            </span>
+                          )}
+                        </span>
                         <span className="text-[11px] text-text-muted shrink-0">{formatDate(entry.entry_date)}</span>
                         {entry.receipt_url && (
                           <a
@@ -711,6 +792,8 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                               note: entry.note ?? '',
                               date: entry.entry_date,
                               link: entry.receipt_url ?? '',
+                              category: entry.category ?? 'other',
+                              expense_type: entry.expense_type ?? '',
                             })
                           }}
                           className="opacity-0 group-hover/spend:opacity-100 text-text-muted hover:text-text-primary transition-all"

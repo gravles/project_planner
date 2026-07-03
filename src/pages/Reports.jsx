@@ -4,6 +4,9 @@ import { parseISO, getMonth, getYear } from 'date-fns'
 import AppShell from '../components/layout/AppShell'
 import { useProjects } from '../hooks/useProjects'
 import { useProperties } from '../hooks/useProperties'
+import { spendRowsForYear, buildSpendCsv, categoryTotalsForYear } from '../lib/spendCsv'
+import { SPEND_CATEGORY_LABELS } from '../lib/utils'
+import { toast } from '../stores/toastStore'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -68,6 +71,28 @@ export default function Reports() {
       .filter(r => r.spend > 0)
       .sort((a, b) => b.spend - a.spend)
   }, [filtered])
+
+  // Category × capital/current breakdown for the selected year
+  const categoryTotals = useMemo(() => categoryTotalsForYear(filtered, year), [filtered, year])
+  const unclassifiedTotal = categoryTotals.reduce((s, t) => s + t.unclassified, 0)
+
+  function exportYearCsv() {
+    const rows = spendRowsForYear(filtered, year)
+    if (rows.length === 0) {
+      toast.info(`No spend entries in ${year} to export.`)
+      return
+    }
+    const propName = propertyFilter === 'all'
+      ? 'all-properties'
+      : (properties.find(p => p.id === propertyFilter)?.name ?? 'property').toLowerCase().replace(/\s+/g, '-')
+    const blob = new Blob([buildSpendCsv(rows)], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `spend-${propName}-${year}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   // Totals
   const totalEstimate = filtered.reduce((s, p) => s + Number(p.estimate_cad ?? 0), 0)
@@ -181,6 +206,65 @@ export default function Reports() {
             <div className="h-[220px] flex items-center justify-center text-text-muted text-sm">
               No spend entries for {year}
             </div>
+          )}
+        </div>
+
+        {/* Tax-ready category breakdown */}
+        <div className="bg-bg-surface border border-border rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="font-display text-base font-bold text-text-primary">Spend by Category — {year}</h2>
+            <button
+              onClick={exportYearCsv}
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-border text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+            >
+              ⬇ Export {year} CSV
+            </button>
+          </div>
+          <p className="text-xs text-text-muted mb-4">
+            Capital = improves the property (depreciated) · Current = repair/upkeep (deducted in-year).
+            Guidance only — confirm with your accountant.
+          </p>
+          {categoryTotals.length === 0 ? (
+            <p className="text-sm text-text-muted py-4">No classified spend in {year}.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-text-muted border-b border-border">
+                  <th className="text-left pb-2 font-medium">Category</th>
+                  <th className="text-right pb-2 font-medium">Capital</th>
+                  <th className="text-right pb-2 font-medium">Current</th>
+                  <th className="text-right pb-2 font-medium">Unclassified</th>
+                  <th className="text-right pb-2 font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categoryTotals.map(row => (
+                  <tr key={row.category} className="border-b border-border/50 last:border-0">
+                    <td className="py-2.5 text-text-primary font-medium">
+                      {SPEND_CATEGORY_LABELS[row.category] ?? row.category}
+                    </td>
+                    <td className="py-2.5 text-right text-text-secondary">{row.capital > 0 ? fmt(row.capital) : '—'}</td>
+                    <td className="py-2.5 text-right text-text-secondary">{row.current > 0 ? fmt(row.current) : '—'}</td>
+                    <td className={`py-2.5 text-right ${row.unclassified > 0 ? 'text-accent' : 'text-text-muted'}`}>
+                      {row.unclassified > 0 ? fmt(row.unclassified) : '—'}
+                    </td>
+                    <td className="py-2.5 text-right text-text-primary font-medium">{fmt(row.total)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="pt-3 text-text-primary font-semibold">Total</td>
+                  <td className="pt-3 text-right text-text-primary font-semibold">{fmt(categoryTotals.reduce((s, t) => s + t.capital, 0))}</td>
+                  <td className="pt-3 text-right text-text-primary font-semibold">{fmt(categoryTotals.reduce((s, t) => s + t.current, 0))}</td>
+                  <td className={`pt-3 text-right font-semibold ${unclassifiedTotal > 0 ? 'text-accent' : 'text-text-muted'}`}>{fmt(unclassifiedTotal)}</td>
+                  <td className="pt-3 text-right text-text-primary font-semibold">{fmt(yearSpend)}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+          {unclassifiedTotal > 0 && (
+            <p className="text-xs text-accent/80 mt-3">
+              {fmt(unclassifiedTotal)} is unclassified — open those entries and set capital vs current before tax time.
+            </p>
           )}
         </div>
 

@@ -14,7 +14,7 @@ export function useProjects(propertyName = null) {
           *,
           properties(id, name, color, icon),
           subtasks(id, done),
-          spend_entries(amount_cad),
+          spend_entries(id, amount_cad, entry_date, note, category, expense_type, receipt_url),
           project_tags(tag_id, tags(id, name, color))
         `)
         .eq('is_template', false)
@@ -251,10 +251,15 @@ export function useDeleteSubtask() {
 export function useAddSpend() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ projectId, amount_cad, note, entry_date, receipt_url }) => {
+    mutationFn: async ({ projectId, amount_cad, note, entry_date, receipt_url, category, expense_type }) => {
       const { error } = await supabase
         .from('spend_entries')
-        .insert({ project_id: projectId, amount_cad, note, entry_date, receipt_url: receipt_url || null })
+        .insert({
+          project_id: projectId, amount_cad, note, entry_date,
+          receipt_url: receipt_url || null,
+          category: category || 'other',
+          expense_type: expense_type || null,
+        })
       if (error) throw error
     },
     onSuccess: (_, { projectId }) => {
@@ -269,10 +274,15 @@ export function useAddSpend() {
 export function useUpdateSpend() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, amount_cad, note, entry_date, receipt_url }) => {
+    mutationFn: async ({ id, amount_cad, note, entry_date, receipt_url, category, expense_type }) => {
       const { error } = await supabase
         .from('spend_entries')
-        .update({ amount_cad, note: note || null, entry_date, receipt_url: receipt_url || null })
+        .update({
+          amount_cad, note: note || null, entry_date,
+          receipt_url: receipt_url || null,
+          category: category || 'other',
+          expense_type: expense_type || null,
+        })
         .eq('id', id)
       if (error) throw error
     },

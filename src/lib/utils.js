@@ -47,6 +47,27 @@ export function groupBy(arr, fn) {
   }, {})
 }
 
+// Spend classification — category is what the money bought; expense_type is
+// the capital-vs-current split that matters for rental-property tax prep.
+export const SPEND_CATEGORIES = [
+  'materials', 'labour', 'permits_fees', 'tools', 'appliances',
+  'maintenance_repair', 'insurance', 'utilities', 'other',
+]
+
+export const SPEND_CATEGORY_LABELS = {
+  materials: 'Materials',
+  labour: 'Labour',
+  permits_fees: 'Permits & fees',
+  tools: 'Tools',
+  appliances: 'Appliances',
+  maintenance_repair: 'Maintenance & repair',
+  insurance: 'Insurance',
+  utilities: 'Utilities',
+  other: 'Other',
+}
+
+export const EXPENSE_TYPES = ['capital', 'current']
+
 export const STATUS_COLORS = {
   Backlog: 'bg-text-muted/20 text-text-secondary',
   'In Progress': 'bg-info/20 text-info',

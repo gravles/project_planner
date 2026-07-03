@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { useProjects, useAddSpend } from '../../hooks/useProjects'
 import { parseReceiptImage } from '../../lib/anthropic'
 import { toast } from '../../stores/toastStore'
+import { SPEND_CATEGORIES, SPEND_CATEGORY_LABELS } from '../../lib/utils'
 
 export default function QuickSpendFAB() {
   const [open, setOpen] = useState(false)
@@ -11,6 +12,8 @@ export default function QuickSpendFAB() {
   const [note, setNote] = useState('')
   const [link, setLink] = useState('')
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [category, setCategory] = useState('other')
+  const [expenseType, setExpenseType] = useState('')
 
   const [receiptScanning, setReceiptScanning] = useState(false)
   const receiptInputRef = useRef(null)
@@ -33,6 +36,8 @@ export default function QuickSpendFAB() {
       if (result.amount_cad) setAmount(String(result.amount_cad))
       if (result.note) setNote(result.note)
       if (result.date) setDate(result.date)
+      if (SPEND_CATEGORIES.includes(result.category)) setCategory(result.category)
+      if (['capital', 'current'].includes(result.expense_type)) setExpenseType(result.expense_type)
     } catch {
       toast.error('Could not read receipt. Try a clearer photo.')
     } finally {
@@ -53,6 +58,8 @@ export default function QuickSpendFAB() {
     setNote('')
     setLink('')
     setDate(format(new Date(), 'yyyy-MM-dd'))
+    setCategory('other')
+    setExpenseType('')
   }
 
   async function handleSubmit(e) {
@@ -64,6 +71,8 @@ export default function QuickSpendFAB() {
       note: note.trim() || null,
       entry_date: date,
       receipt_url: link.trim() || null,
+      category,
+      expense_type: expenseType || null,
     })
     handleClose()
   }
@@ -177,6 +186,24 @@ export default function QuickSpendFAB() {
                 placeholder="Product link (optional)"
                 className="w-full bg-bg-elevated border border-border rounded-xl px-3 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
               />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
+                  className="bg-bg-elevated border border-border rounded-xl px-3 py-3 text-sm text-text-primary focus:outline-none focus:border-accent"
+                >
+                  {SPEND_CATEGORIES.map(c => <option key={c} value={c}>{SPEND_CATEGORY_LABELS[c]}</option>)}
+                </select>
+                <select
+                  value={expenseType}
+                  onChange={e => setExpenseType(e.target.value)}
+                  className="bg-bg-elevated border border-border rounded-xl px-3 py-3 text-sm text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="">Tax: unclassified</option>
+                  <option value="capital">Capital</option>
+                  <option value="current">Current</option>
+                </select>
+              </div>
 
               <button
                 type="submit"
