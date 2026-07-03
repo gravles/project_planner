@@ -4,6 +4,25 @@ import BulkActionBar from './BulkActionBar'
 import ProjectCard from './ProjectCard'
 import { useUpdateProject, useDeleteProject } from '../../hooks/useProjects'
 
+function SortIcon({ sort, k }) {
+  if (sort.key !== k) return <span className="opacity-25 text-[10px]">↕</span>
+  return <span className="text-accent text-[10px]">{sort.dir === 'asc' ? '↑' : '↓'}</span>
+}
+
+function TH({ sort, onSort, k, label, className = '' }) {
+  return (
+    <th
+      className={cn(
+        'px-4 py-3 text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider cursor-pointer select-none hover:text-text-secondary whitespace-nowrap',
+        className,
+      )}
+      onClick={() => onSort(k)}
+    >
+      {label} <SortIcon sort={sort} k={k} />
+    </th>
+  )
+}
+
 export default function ListView({ projects, onOpen }) {
   const [sort, setSort] = useState({ key: 'created_at', dir: 'desc' })
   const [selectedIds, setSelectedIds] = useState(new Set())
@@ -57,25 +76,6 @@ export default function ListView({ projects, onOpen }) {
     setSelectedIds(new Set())
   }
 
-  function SortIcon({ k }) {
-    if (sort.key !== k) return <span className="opacity-25 text-[10px]">↕</span>
-    return <span className="text-accent text-[10px]">{sort.dir === 'asc' ? '↑' : '↓'}</span>
-  }
-
-  function TH({ k, label, className = '' }) {
-    return (
-      <th
-        className={cn(
-          'px-4 py-3 text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider cursor-pointer select-none hover:text-text-secondary whitespace-nowrap',
-          className,
-        )}
-        onClick={() => toggleSort(k)}
-      >
-        {label} <SortIcon k={k} />
-      </th>
-    )
-  }
-
   return (
     <div className="overflow-auto flex-1 scrollbar-thin">
 
@@ -102,12 +102,12 @@ export default function ListView({ projects, onOpen }) {
                 className="w-3.5 h-3.5 rounded border-border accent-accent cursor-pointer"
               />
             </th>
-            <TH k="title" label="Project" />
-            <TH k="status" label="Status" />
-            <TH k="priority" label="Priority" />
-            <TH k="room" label="Room" />
-            <TH k="due_date" label="Due" />
-            <TH k="estimate_cad" label="Estimate" className="text-right" />
+            <TH sort={sort} onSort={toggleSort} k="title" label="Project" />
+            <TH sort={sort} onSort={toggleSort} k="status" label="Status" />
+            <TH sort={sort} onSort={toggleSort} k="priority" label="Priority" />
+            <TH sort={sort} onSort={toggleSort} k="room" label="Room" />
+            <TH sort={sort} onSort={toggleSort} k="due_date" label="Due" />
+            <TH sort={sort} onSort={toggleSort} k="estimate_cad" label="Estimate" className="text-right" />
             <th className="px-4 py-3 text-left text-[11px] font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap">
               Vendor
             </th>

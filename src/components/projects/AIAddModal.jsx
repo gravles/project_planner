@@ -32,7 +32,7 @@ export default function AIAddModal({ open, onClose, onCreate }) {
         subtasks: Array.isArray(result.subtasks) ? result.subtasks : [],
       }
       setParsed(initialData)
-    } catch (e) {
+    } catch {
       setError('Failed to parse. Check your Anthropic API key and try again.')
     } finally {
       setLoading(false)

@@ -275,12 +275,8 @@ CREATE POLICY "Authenticated delete" ON storage.objects FOR DELETE TO authentica
 
 ## Environment Variables
 
-### `.env` (create this file in project root, do NOT commit to git)
-```
-VITE_SUPABASE_URL=https://jcsermnzozpqqzmkjjvx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impjc2VybW56b3pwcXF6bWtqanZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNzE2ODEsImV4cCI6MjA5MDg0NzY4MX0.mM_N-1DU3EutEFjTOBdyVHwtWVQseOXb4EjsHgUxBEY
-VITE_ANTHROPIC_API_KEY=# Nathan will provide this key — add it before running the app
-```
+### `.env`
+(Real values redacted — copy `.env.example` and fill in from the Supabase dashboard.)
 
 ### `.env.example` (safe to commit — no real values)
 ```

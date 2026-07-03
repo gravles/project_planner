@@ -59,7 +59,11 @@ function Field({ label, children }) {
 
 function InlineInput({ value, onBlurSave, type = 'text', placeholder, className = '' }) {
   const [local, setLocal] = useState(value ?? '')
-  useEffect(() => setLocal(value ?? ''), [value])
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setLocal(value ?? '')
+  }
   return (
     <input
       type={type}
@@ -77,7 +81,11 @@ function InlineInput({ value, onBlurSave, type = 'text', placeholder, className 
 
 function SubtaskTimeInput({ value, onSave }) {
   const [local, setLocal] = useState(value != null ? String(value) : '')
-  useEffect(() => setLocal(value != null ? String(value) : ''), [value])
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setLocal(value != null ? String(value) : '')
+  }
   return (
     <input
       type="number"
@@ -94,7 +102,11 @@ function SubtaskTimeInput({ value, onSave }) {
 
 function InlineTextarea({ value, onBlurSave, placeholder, rows = 3 }) {
   const [local, setLocal] = useState(value ?? '')
-  useEffect(() => setLocal(value ?? ''), [value])
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setLocal(value ?? '')
+  }
   return (
     <textarea
       value={local}

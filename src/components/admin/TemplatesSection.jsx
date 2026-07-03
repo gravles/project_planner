@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTemplates, useDeleteTemplate } from '../../hooks/useTemplates'
 import { useCreateProject } from '../../hooks/useProjects'
-import { toast } from '../../stores/toastStore'
 import NewProjectModal from '../projects/NewProjectModal'
 import { cn } from '../../lib/utils'
 

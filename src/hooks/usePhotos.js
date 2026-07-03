@@ -1,10 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import { supabase, getSignedUrls } from '../lib/supabase'
 import { toast } from '../stores/toastStore'
-
-function getPublicUrl(path) {
-  return supabase.storage.from('project-files').getPublicUrl(path).data.publicUrl
-}
 
 export function useProjectPhotos(projectId) {
   return useQuery({
@@ -17,7 +13,8 @@ export function useProjectPhotos(projectId) {
         .eq('project_id', projectId)
         .order('created_at')
       if (error) throw error
-      return data.map(photo => ({ ...photo, url: getPublicUrl(photo.storage_path) }))
+      const urls = await getSignedUrls(data.map(p => p.storage_path))
+      return data.map(photo => ({ ...photo, url: urls.get(photo.storage_path) ?? null }))
     },
   })
 }

@@ -1,11 +1,19 @@
 // All Claude calls go through /api/claude (Vercel serverless proxy).
 // The Anthropic API key lives server-side as ANTHROPIC_API_KEY — never in the browser.
+// The proxy requires a valid Supabase session token in the Authorization header.
+import { supabase } from './supabase'
+
 const PROXY = '/api/claude'
 
 async function callClaude(body) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('You must be signed in to use AI features.')
   const res = await fetch(PROXY, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    },
     body: JSON.stringify(body),
   })
   if (!res.ok) {

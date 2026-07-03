@@ -1,16 +1,60 @@
-# React + Vite
+# Home Projects
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A personal home-improvement project tracker for managing renovation work, budgets,
+photos, vendors, and maintenance across multiple properties. Single-user by design.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Layer | Choice |
+|---|---|
+| Frontend | React 19 + Vite, Tailwind CSS |
+| Server state | TanStack React Query · UI state: Zustand |
+| Database / Auth / Storage | Supabase (Postgres, email auth, private storage bucket) |
+| Hosting | Vercel (SPA + serverless functions in `api/`) |
+| AI | Anthropic Claude via the authenticated `/api/claude` proxy |
+| Integrations | Remote MCP server at `/api/mcp` (OAuth 2.0 + PKCE, password-gated authorize) |
 
-## React Compiler
+## Local setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm ci
+cp .env.example .env   # fill in the two VITE_ values from the Supabase dashboard
+npm run dev
+```
 
-## Expanding the ESLint configuration
+`npm run lint`, `npm run test:run`, and `npm run build` must pass before opening a PR.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Environment variables
+
+Client (`.env`, Vite-inlined at build time):
+
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+
+Server-side (Vercel → Project Settings → Environment Variables):
+
+- `ANTHROPIC_API_KEY` — used by `/api/claude` and the cron digest
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- `OAUTH_JWT_SECRET`, `MCP_SECRET`, `MCP_AUTHORIZE_PASSWORD` — MCP server + OAuth
+- `CRON_SECRET` — protects `/api/cron/daily`
+- `RESEND_API_KEY`, `DIGEST_TO_EMAIL` — email alerts and the Monday digest
+
+## Database migrations
+
+Migrations live in `supabase/migrations/` and are plain SQL, applied in filename
+order. Apply new migrations via the Supabase SQL editor or MCP `apply_migration`.
+Rules: **additive only** (never drop/rename in the same release as dependent code),
+and migrations ship **before** the app code that needs them. Exception:
+`008_private_bucket.sql` must be applied **after** the signed-URL code deploys —
+see the note in that file.
+
+## Deployment
+
+Push to `main` → Vercel builds and deploys. Crons are configured in `vercel.json`
+(`/api/cron/daily` runs every morning: maintenance generation, alerts, Monday digest).
+
+Post-deploy smoke check: log in → board loads → open a project → toggle a subtask →
+add a spend entry → upload a photo → AI quick-add parses → share link renders logged-out.
+
+## Project plan
+
+The active roadmap and conventions are in [PLAN.md](PLAN.md).

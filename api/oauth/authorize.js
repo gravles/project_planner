@@ -1,8 +1,9 @@
-// GET  /oauth/authorize — show approval page
-// POST /oauth/authorize — issue auth code and redirect
-import { getSupabase, randomToken, json, oauthError, handleOptions, cors, ISSUER } from '../_lib/oauth.js'
+// GET  /oauth/authorize — show approval page (password-protected)
+// POST /oauth/authorize — verify password, issue auth code and redirect
+import { createHash, timingSafeEqual } from 'crypto'
+import { getSupabase, randomToken, oauthError, handleOptions, cors, ISSUER } from '../_lib/oauth.js'
 
-function authPage(params) {
+function authPage(params, errorMsg = '') {
   const qs = new URLSearchParams(params).toString()
   return `<!DOCTYPE html>
 <html lang="en">
@@ -19,23 +20,45 @@ function authPage(params) {
             padding: 2rem; max-width: 400px; width: 100%; text-align: center; }
     h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
     p  { font-size: 0.875rem; color: #9ca3af; margin-bottom: 1.5rem; line-height: 1.5; }
+    input[type=password] { width: 100%; padding: 0.75rem 1rem; border-radius: 8px;
+             border: 1px solid #2a2a2a; background: #0f0f0f; color: #e5e5e5;
+             font-size: 0.875rem; margin-bottom: 1rem; }
     button { width: 100%; padding: 0.75rem 1.5rem; border-radius: 8px; border: none;
              background: #f59e0b; color: #0f0f0f; font-size: 0.875rem; font-weight: 600;
              cursor: pointer; transition: background 0.15s; }
     button:hover { background: #fbbf24; }
+    .error { color: #ef4444; font-size: 0.8rem; margin-bottom: 1rem; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Authorize Project Planner</h1>
-    <p>Claude is requesting access to manage your projects, add spend entries, and update tasks.</p>
+    <p>Claude is requesting access to manage your projects, add spend entries, and update tasks.
+       Enter the authorization password to approve.</p>
+    ${errorMsg ? `<div class="error">${errorMsg}</div>` : ''}
     <form method="POST" action="/oauth/authorize">
       <input type="hidden" name="_params" value="${qs}">
+      <input type="password" name="password" placeholder="Authorization password" required autofocus>
       <button type="submit">Authorize</button>
     </form>
   </div>
 </body>
 </html>`
+}
+
+function passwordMatches(supplied) {
+  const expected = process.env.MCP_AUTHORIZE_PASSWORD
+  if (!expected || !supplied) return false
+  const a = createHash('sha256').update(supplied).digest()
+  const b = createHash('sha256').update(expected).digest()
+  return timingSafeEqual(a, b)
+}
+
+// Verify the client exists and the redirect_uri is registered for it.
+async function validateClient(sb, clientId, redirectUri) {
+  if (!clientId || !redirectUri) return false
+  const { data: client } = await sb.from('oauth_clients').select('redirect_uris').eq('client_id', clientId).single()
+  return !!client && client.redirect_uris.includes(redirectUri)
 }
 
 export default async function handler(req, res) {
@@ -54,9 +77,7 @@ export default async function handler(req, res) {
     if (response_type !== 'code') return oauthError(res, 'unsupported_response_type', 'Only code is supported')
     if (!client_id || !redirect_uri || !code_challenge) return oauthError(res, 'invalid_request', 'Missing required parameters')
 
-    // Verify client exists and redirect_uri is registered
-    const { data: client } = await sb.from('oauth_clients').select('redirect_uris').eq('client_id', client_id).single()
-    if (!client || !client.redirect_uris.includes(redirect_uri)) {
+    if (!await validateClient(sb, client_id, redirect_uri)) {
       return oauthError(res, 'invalid_client', 'Unknown client or redirect_uri', 401)
     }
 
@@ -66,7 +87,7 @@ export default async function handler(req, res) {
     return
   }
 
-  // ── POST: issue code and redirect ───────────────────────────────────────
+  // ── POST: verify password, issue code and redirect ─────────────────────
   if (req.method === 'POST') {
     let raw = ''
     await new Promise(r => { req.on('data', c => { raw += c }); req.on('end', r) })
@@ -78,6 +99,17 @@ export default async function handler(req, res) {
 
     if (!client_id || !redirect_uri || !code_challenge) {
       return oauthError(res, 'invalid_request', 'Missing required parameters')
+    }
+
+    if (!await validateClient(sb, client_id, redirect_uri)) {
+      return oauthError(res, 'invalid_client', 'Unknown client or redirect_uri', 401)
+    }
+
+    if (!passwordMatches(body.password)) {
+      cors(res)
+      res.writeHead(401, { 'Content-Type': 'text/html' })
+      res.end(authPage({ client_id, redirect_uri, code_challenge, state: state ?? '' }, 'Incorrect password.'))
+      return
     }
 
     const code      = randomToken(32)

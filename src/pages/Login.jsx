@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -88,13 +88,6 @@ export default function Login() {
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-sm text-text-muted">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-accent hover:underline">
-            Create one
-          </Link>
-        </p>
       </div>
     </div>
   )

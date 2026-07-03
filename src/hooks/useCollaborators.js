@@ -112,7 +112,7 @@ export function useRemoveCollaborator() {
 export function useCancelInvitation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ invitationId, projectId }) => {
+    mutationFn: async ({ invitationId }) => {
       const { error } = await supabase
         .from('project_invitations')
         .delete()

@@ -60,10 +60,6 @@ export default function Vendors() {
     [...new Set(projects.filter(p => p.vendor?.trim()).map(p => p.vendor.trim()))].sort()
   , [projects])
 
-  // Merged list: vendor records + any project vendors not in directory
-  const vendorRecordNames = new Set(vendors.map(v => v.name.toLowerCase()))
-  const unrecordedNames = projectVendorNames.filter(n => !vendorRecordNames.has(n.toLowerCase()))
-
   const allNames = useMemo(() => {
     const s = new Set([...vendors.map(v => v.name), ...projectVendorNames])
     return [...s].sort()

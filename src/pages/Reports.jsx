@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { parseISO, getMonth, getYear, format } from 'date-fns'
+import { parseISO, getMonth, getYear } from 'date-fns'
 import AppShell from '../components/layout/AppShell'
 import { useProjects } from '../hooks/useProjects'
 import { useProperties } from '../hooks/useProperties'
-import { groupBy } from '../lib/utils'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 

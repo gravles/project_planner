@@ -37,10 +37,19 @@ export default async function handler(req, res) {
   data.subtasks?.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   data.spend_entries?.sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date))
 
-  // Attach public URLs to photos
+  // Attach signed URLs to photos (bucket is private; 1-hour TTL is fine
+  // for a read-only share page that fetches fresh URLs on each load)
+  const paths = data.project_photos?.map(p => p.storage_path) ?? []
+  let signed = new Map()
+  if (paths.length) {
+    const { data: signedData } = await supabase.storage
+      .from('project-files')
+      .createSignedUrls(paths, 60 * 60)
+    signed = new Map((signedData ?? []).filter(d => d.signedUrl).map(d => [d.path, d.signedUrl]))
+  }
   data.project_photos = data.project_photos?.map(photo => ({
     ...photo,
-    url: supabase.storage.from('project-files').getPublicUrl(photo.storage_path).data.publicUrl,
+    url: signed.get(photo.storage_path) ?? null,
   })) ?? []
   data.project_photos.sort((a, b) => new Date(a.taken_at ?? 0) - new Date(b.taken_at ?? 0))
 

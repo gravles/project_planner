@@ -80,7 +80,7 @@ function AiRecommendations({ project, photos }) {
     try {
       const result = await getRoomRecommendations(project, photos)
       setRecs(result)
-    } catch (e) {
+    } catch {
       setError('Could not get recommendations. Try again.')
     } finally {
       setLoading(false)

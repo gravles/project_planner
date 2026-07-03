@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', '.vite']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -23,7 +23,16 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // ^[A-Z_] keeps JSX component imports (core rule can't see JSX usage);
+      // motion is the one lowercase identifier used as a JSX namespace.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]|^motion$' }],
+    },
+  },
+  {
+    // Vercel serverless functions + build scripts run in Node
+    files: ['api/**/*.js', 'scripts/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ])
