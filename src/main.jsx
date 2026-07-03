@@ -14,6 +14,7 @@ import Reports from './pages/Reports'
 import ShareView from './pages/ShareView'
 import ShoppingList from './pages/ShoppingList'
 import Maintenance from './pages/Maintenance'
+import Documents from './pages/Documents'
 import Toast from './components/ui/Toast'
 import InstallPrompt from './components/ui/InstallPrompt'
 
@@ -86,6 +87,14 @@ createRoot(document.getElementById('root')).render(
             element={
               <ProtectedRoute>
                 <Maintenance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/documents"
+            element={
+              <ProtectedRoute>
+                <Documents />
               </ProtectedRoute>
             }
           />

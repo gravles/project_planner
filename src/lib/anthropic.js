@@ -217,6 +217,31 @@ Return ONLY a JSON array of strings. No markdown.`,
   return JSON.parse(raw.replace(/```json|```/g, '').trim())
 }
 
+export async function parseDocument(base64Data, mimeType) {
+  const block = mimeType === 'application/pdf'
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Data } }
+    : { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } }
+  const data = await callClaude({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 400,
+    system: `You are a home document classifier. Extract key details from the document (permit, warranty card, insurance policy, appliance manual, quote, or invoice) and return ONLY a valid JSON object:
+{
+  "title": "short descriptive title, max 60 chars (e.g. 'LG Dishwasher Warranty', 'STR Permit 2026')",
+  "doc_type": "permit" | "warranty" | "insurance" | "manual" | "quote" | "invoice" | "other",
+  "expires_on": "YYYY-MM-DD or null (expiry, renewal, or warranty-end date if visible)",
+  "vendor": "issuing company/vendor or null",
+  "notes": "one useful detail worth remembering, max 100 chars, or null"
+}
+JSON only, no markdown.`,
+    messages: [{
+      role: 'user',
+      content: [block, { type: 'text', text: 'Classify this document.' }],
+    }],
+  })
+  const raw = data.content?.find(b => b.type === 'text')?.text || '{}'
+  return JSON.parse(raw.replace(/```json|```/g, '').trim())
+}
+
 export async function suggestMaintenancePlans(property, existingTitles = []) {
   const data = await callClaude({
     model: 'claude-sonnet-4-20250514',

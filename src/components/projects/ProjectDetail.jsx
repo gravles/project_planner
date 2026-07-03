@@ -22,6 +22,7 @@ import Combobox from '../ui/Combobox'
 import TagPicker from '../ui/TagPicker'
 import PhotoGallery from './PhotoGallery'
 import AttachmentsList from './AttachmentsList'
+import ProjectDocuments from './ProjectDocuments'
 import AiBudgetEstimator from './AiBudgetEstimator'
 import AiTimeEstimator from './AiTimeEstimator'
 import SharePanel from './SharePanel'
@@ -740,6 +741,9 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
 
               {/* ── Attachments ── */}
               <AttachmentsList projectId={projectId} />
+
+              {/* ── Linked vault documents ── */}
+              <ProjectDocuments projectId={projectId} />
 
               {/* ── AI Suggestions ── */}
               <div>
