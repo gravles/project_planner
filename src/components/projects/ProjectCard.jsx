@@ -41,6 +41,11 @@ export default function ProjectCard({ project, onOpen, isDragging = false }) {
         <span className="text-[11px] text-text-muted bg-bg-base px-1.5 py-0.5 rounded-md">
           {project.room}
         </span>
+        {project.maintenance_plan_id && (
+          <span title="Generated from a maintenance plan" className="text-[11px] text-info bg-info/10 px-1.5 py-0.5 rounded-md">
+            ↻ recurring
+          </span>
+        )}
         {project.vendor && (
           <span className="text-[11px] text-text-muted truncate max-w-[100px]">
             {project.vendor}

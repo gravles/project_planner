@@ -217,6 +217,29 @@ Return ONLY a JSON array of strings. No markdown.`,
   return JSON.parse(raw.replace(/```json|```/g, '').trim())
 }
 
+export async function suggestMaintenancePlans(property, existingTitles = []) {
+  const data = await callClaude({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1200,
+    system: `You are a home maintenance expert for the Ottawa, Canada climate (cold snowy winters, hot humid summers, freeze-thaw springs).
+Given a property, suggest a preventive maintenance schedule.
+Return ONLY a JSON array (max 8 items) of:
+{
+  "title": string (short task name, e.g. "Replace furnace filter"),
+  "cadence": "monthly" | "quarterly" | "biannual" | "annual",
+  "anchor_month": number 1-12 (the month it should happen; for quarterly the phase month; pick seasonally sensible months),
+  "checklist": [{ "text": string }] (2-5 concrete steps),
+  "estimate_cad": number (0 if DIY-free),
+  "room": "Exterior" | "Kitchen" | "Living Room" | "Bedroom" | "Bathroom" | "Basement" | "Electrical" | "Other"
+}
+Skip anything already covered by these existing plans: ${JSON.stringify(existingTitles)}.
+Prioritize items that prevent expensive damage (gutters, furnace, sump pump, caulking, smoke detectors). JSON only, no markdown.`,
+    messages: [{ role: 'user', content: JSON.stringify(property) }],
+  })
+  const raw = data.content?.find(b => b.type === 'text')?.text || '[]'
+  return JSON.parse(raw.replace(/```json|```/g, '').trim())
+}
+
 export async function generateWeeklySummary(projects) {
   const data = await callClaude({
     model: 'claude-sonnet-4-20250514',

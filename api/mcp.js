@@ -28,6 +28,13 @@ function getSupabase() {
   return createClient(url, key)
 }
 
+// Service-role inserts bypass the set_project_owner trigger (no auth.uid()),
+// so new projects must be owned explicitly or RLS hides them from the app.
+async function getOwnerId(supabase) {
+  const { data } = await supabase.from('profiles').select('id').order('created_at').limit(1).single()
+  return data?.id ?? null
+}
+
 // Resolve a property name (partial, case-insensitive) to its UUID.
 // Returns { id, name } or null. Surfaces a helpful message if not found.
 async function resolveProperty(supabase, name) {
@@ -165,6 +172,7 @@ function buildServer() {
         estimate_cad: estimate_cad ?? 0,
         vendor: vendor ?? null,
         notes: notes ?? null,
+        owner_id: await getOwnerId(sb),
       }).select('id, title').single()
 
       if (error) throw new Error(error.message)

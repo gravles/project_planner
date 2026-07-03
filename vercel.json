@@ -1,4 +1,7 @@
 {
+  "crons": [
+    { "path": "/api/cron/daily", "schedule": "0 11 * * *" }
+  ],
   "rewrites": [
     { "source": "/.well-known/oauth-authorization-server",          "destination": "/api/oauth-as-metadata" },
     { "source": "/.well-known/oauth-protected-resource/api/mcp",    "destination": "/api/oauth-pr-metadata" },

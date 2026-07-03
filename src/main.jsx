@@ -13,6 +13,7 @@ import Vendors from './pages/Vendors'
 import Reports from './pages/Reports'
 import ShareView from './pages/ShareView'
 import ShoppingList from './pages/ShoppingList'
+import Maintenance from './pages/Maintenance'
 import Toast from './components/ui/Toast'
 import InstallPrompt from './components/ui/InstallPrompt'
 
@@ -77,6 +78,14 @@ createRoot(document.getElementById('root')).render(
             element={
               <ProtectedRoute>
                 <ShoppingList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/maintenance"
+            element={
+              <ProtectedRoute>
+                <Maintenance />
               </ProtectedRoute>
             }
           />

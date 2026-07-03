@@ -24,7 +24,6 @@ import PhotoGallery from './PhotoGallery'
 import AttachmentsList from './AttachmentsList'
 import AiBudgetEstimator from './AiBudgetEstimator'
 import AiTimeEstimator from './AiTimeEstimator'
-import RecurrencePanel from './RecurrencePanel'
 import SharePanel from './SharePanel'
 import { getProjectSuggestions, parseReceiptImage, generateMaterialList } from '../../lib/anthropic'
 import { useAddShoppingItems } from '../../hooks/useShoppingList'
@@ -741,15 +740,6 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
 
               {/* ── Attachments ── */}
               <AttachmentsList projectId={projectId} />
-
-              {/* ── Recurrence ── */}
-              <div>
-                <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Recurrence</p>
-                <RecurrencePanel
-                  project={project}
-                  onSave={v => updateProject.mutate({ id: projectId, recurrence: v })}
-                />
-              </div>
 
               {/* ── AI Suggestions ── */}
               <div>
