@@ -26,6 +26,14 @@ export default function Toast() {
             >
               <span className={`font-bold text-sm shrink-0 ${s.iconColor}`}>{s.icon}</span>
               <span className="flex-1 text-sm text-text-primary">{t.message}</span>
+              {t.action && (
+                <button
+                  onClick={() => { t.action.onClick(); removeToast(t.id) }}
+                  className="shrink-0 text-xs font-semibold text-accent hover:text-amber-300 transition-colors uppercase tracking-wide"
+                >
+                  {t.action.label}
+                </button>
+              )}
               <button
                 onClick={() => removeToast(t.id)}
                 className="shrink-0 text-text-muted hover:text-text-primary transition-colors text-xs"

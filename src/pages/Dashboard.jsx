@@ -8,6 +8,7 @@ import { useProjects } from '../hooks/useProjects'
 import { useProperties } from '../hooks/useProperties'
 import { generateWeeklySummary } from '../lib/anthropic'
 import { useUIStore } from '../stores/uiStore'
+import { DashboardSkeleton } from '../components/ui/Skeleton'
 import { cn, STATUS_COLORS, PROPERTY_COLORS, formatDate } from '../lib/utils'
 
 function StatCard({ label, value, sub, accent = false }) {
@@ -107,9 +108,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="flex items-center justify-center h-full">
-          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-        </div>
+        <DashboardSkeleton />
       </AppShell>
     )
   }

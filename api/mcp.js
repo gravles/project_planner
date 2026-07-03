@@ -43,6 +43,7 @@ async function resolveProject(supabase, titleSearch) {
     .select('id, title')
     .ilike('title', `%${titleSearch}%`)
     .eq('is_template', false)
+    .is('deleted_at', null)
     .limit(3)
   if (!data?.length) return { error: `No project found matching "${titleSearch}"` }
   if (data.length > 1) return {
@@ -102,6 +103,7 @@ function buildServer() {
         .from('projects')
         .select('id, title, room, status, priority, due_date, estimate_cad, vendor, notes, properties(name), subtasks(id, done)')
         .eq('is_template', false)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
       if (status) q = q.eq('status', status)
       const { data, error } = await q
@@ -425,6 +427,7 @@ function buildServer() {
           spend_entries(amount_cad)
         `)
         .eq('is_template', false)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
 
       const today = new Date().toISOString().split('T')[0]

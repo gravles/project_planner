@@ -18,6 +18,7 @@ export function useProjects(propertyName = null) {
           project_tags(tag_id, tags(id, name, color))
         `)
         .eq('is_template', false)
+        .is('deleted_at', null)
         .order('position', { ascending: true })
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -88,24 +89,58 @@ export function useUpdateProject() {
       const { error } = await supabase.from('projects').update(updates).eq('id', id)
       if (error) throw error
     },
-    onSuccess: (_, { id }) => {
+    // Optimistic: board drags and inline edits update instantly
+    onMutate: async ({ id, ...updates }) => {
+      await qc.cancelQueries({ queryKey: ['projects'] })
+      await qc.cancelQueries({ queryKey: ['project', id] })
+      const prevLists = qc.getQueriesData({ queryKey: ['projects'] })
+      const prevDetail = qc.getQueryData(['project', id])
+      qc.setQueriesData({ queryKey: ['projects'] }, old =>
+        old?.map(p => (p.id === id ? { ...p, ...updates } : p)))
+      if (prevDetail) qc.setQueryData(['project', id], { ...prevDetail, ...updates })
+      return { prevLists, prevDetail, id }
+    },
+    onError: (e, _vars, ctx) => {
+      ctx?.prevLists?.forEach(([key, data]) => qc.setQueryData(key, data))
+      if (ctx?.prevDetail) qc.setQueryData(['project', ctx.id], ctx.prevDetail)
+      toast.error(e.message ?? 'Failed to update project')
+    },
+    onSettled: (_data, _err, { id }) => {
       qc.invalidateQueries({ queryKey: ['projects'] })
       qc.invalidateQueries({ queryKey: ['project', id] })
     },
-    onError: (e) => toast.error(e.message ?? 'Failed to update project'),
   })
 }
 
 export function useDeleteProject() {
   const qc = useQueryClient()
   return useMutation({
+    // Soft delete — recoverable via the Undo toast action
     mutationFn: async (id) => {
-      const { error } = await supabase.from('projects').delete().eq('id', id)
+      const { error } = await supabase
+        .from('projects')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
-      toast.success('Project deleted')
+    onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: ['projects'] })
+      toast.success('Project deleted', {
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            const { error } = await supabase
+              .from('projects')
+              .update({ deleted_at: null })
+              .eq('id', id)
+            if (error) toast.error('Could not restore project')
+            else {
+              toast.success('Project restored')
+              qc.invalidateQueries({ queryKey: ['projects'] })
+            }
+          },
+        },
+      })
     },
     onError: (e) => toast.error(e.message ?? 'Failed to delete project'),
   })
@@ -157,7 +192,26 @@ export function useToggleSubtask() {
       const { error } = await supabase.from('subtasks').update({ done }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: (_, { projectId }) => {
+    // Optimistic: checkbox and card progress bars respond instantly
+    onMutate: async ({ id, done, projectId }) => {
+      await qc.cancelQueries({ queryKey: ['project', projectId] })
+      await qc.cancelQueries({ queryKey: ['projects'] })
+      const prevDetail = qc.getQueryData(['project', projectId])
+      const prevLists = qc.getQueriesData({ queryKey: ['projects'] })
+      const patch = subtasks => subtasks?.map(s => (s.id === id ? { ...s, done } : s))
+      if (prevDetail) {
+        qc.setQueryData(['project', projectId], { ...prevDetail, subtasks: patch(prevDetail.subtasks) })
+      }
+      qc.setQueriesData({ queryKey: ['projects'] }, old =>
+        old?.map(p => (p.id === projectId ? { ...p, subtasks: patch(p.subtasks) } : p)))
+      return { prevDetail, prevLists, projectId }
+    },
+    onError: (e, _vars, ctx) => {
+      if (ctx?.prevDetail) qc.setQueryData(['project', ctx.projectId], ctx.prevDetail)
+      ctx?.prevLists?.forEach(([key, data]) => qc.setQueryData(key, data))
+      toast.error(e.message ?? 'Failed to update subtask')
+    },
+    onSettled: (_data, _err, { projectId }) => {
       qc.invalidateQueries({ queryKey: ['project', projectId] })
       qc.invalidateQueries({ queryKey: ['projects'] })
     },

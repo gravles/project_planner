@@ -8,12 +8,15 @@ import CalendarView from '../components/projects/CalendarView'
 import ProjectDetail from '../components/projects/ProjectDetail'
 import { useProjects, useUpdateProject } from '../hooks/useProjects'
 import { useUIStore } from '../stores/uiStore'
+import { useFilterUrlSync } from '../hooks/useFilterUrlSync'
+import { BoardSkeleton, ListSkeleton } from '../components/ui/Skeleton'
 import QuickSpendFAB from '../components/projects/QuickSpendFAB'
 
 export default function Projects() {
   const { viewMode, activeProperty, detailProjectId, openDetail, closeDetail, searchQuery, activeFilters } = useUIStore()
   const { data: projects = [], isLoading } = useProjects(activeProperty)
   const updateProject = useUpdateProject()
+  useFilterUrlSync()
 
   const filtered = useMemo(
     () => filterProjects(projects, searchQuery, activeFilters),
@@ -30,9 +33,7 @@ export default function Projects() {
         {/* Main content area */}
         <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
           {isLoading ? (
-            <div className="flex-1 flex items-center justify-center h-full">
-              <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-            </div>
+            viewMode === 'list' ? <ListSkeleton /> : <BoardSkeleton />
           ) : viewMode === 'board' ? (
             <BoardView
               projects={filtered}

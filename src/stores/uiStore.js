@@ -1,6 +1,7 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-export const useUIStore = create((set) => ({
+export const useUIStore = create(persist((set) => ({
   // Sidebar
   sidebarOpen: true,
   toggleSidebar: () => set(s => ({ sidebarOpen: !s.sidebarOpen })),
@@ -48,8 +49,18 @@ export const useUIStore = create((set) => ({
   }),
   setFilterOverdue: (overdue) => set(s => ({ activeFilters: { ...s.activeFilters, overdue } })),
   setFilterHideDone: (hideDone) => set(s => ({ activeFilters: { ...s.activeFilters, hideDone } })),
+  // Bulk-set filters (used when hydrating from URL params)
+  setFilters: (partial) => set(s => ({ activeFilters: { ...s.activeFilters, ...partial } })),
   clearFilters: () => set({
     searchQuery: '',
     activeFilters: { statuses: [], priorities: [], tagIds: [], overdue: false, hideDone: false },
+  }),
+}), {
+  name: 'pp-ui',
+  // Only durable view preferences persist; search/filters live in the URL
+  partialize: (s) => ({
+    sidebarOpen: s.sidebarOpen,
+    viewMode: s.viewMode,
+    activeProperty: s.activeProperty,
   }),
 }))
