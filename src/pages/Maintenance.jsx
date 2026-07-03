@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AppShell from '../components/layout/AppShell'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { useProperties } from '../hooks/useProperties'
 import {
   useMaintenancePlans, useMaintenanceProjects,
@@ -70,6 +71,7 @@ function YearStrip({ plan, projects }) {
 
 // ── Create/edit plan modal ────────────────────────────────────────────────────
 function PlanModal({ open, onClose, onSave, properties, initial }) {
+  const panelRef = useModalA11y(open)
   const [form, setForm] = useState(initial ?? EMPTY_PLAN)
   const [prevInitial, setPrevInitial] = useState(initial)
   const [newItem, setNewItem] = useState('')
@@ -106,7 +108,7 @@ function PlanModal({ open, onClose, onSave, properties, initial }) {
             role="dialog" aria-label="Maintenance plan"
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pointer-events-none"
           >
-            <div className="bg-bg-surface sm:border border-border sm:rounded-2xl w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
+            <div ref={panelRef} className="bg-bg-surface sm:border border-border sm:rounded-2xl w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
               <div className="px-6 py-5 border-b border-border flex items-center justify-between sticky top-0 bg-bg-surface z-10">
                 <h2 className="font-display text-base font-bold text-text-primary">
                   {form.id ? 'Edit Plan' : 'New Maintenance Plan'}
@@ -222,6 +224,7 @@ function PlanModal({ open, onClose, onSave, properties, initial }) {
 
 // ── AI suggestions review modal ───────────────────────────────────────────────
 function SuggestModal({ open, onClose, suggestions, property, onAdd }) {
+  const panelRef = useModalA11y(open)
   const [checked, setChecked] = useState(() => new Set(suggestions.map((_, i) => i)))
   const [prevSuggestions, setPrevSuggestions] = useState(suggestions)
   if (prevSuggestions !== suggestions) {
@@ -241,7 +244,7 @@ function SuggestModal({ open, onClose, suggestions, property, onAdd }) {
             role="dialog" aria-label="AI plan suggestions"
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
-            <div className="bg-bg-surface border border-border rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
+            <div ref={panelRef} className="bg-bg-surface border border-border rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
               <div className="px-6 py-5 border-b border-border sticky top-0 bg-bg-surface">
                 <h2 className="font-display text-base font-bold text-text-primary">
                   Suggested plans — {property?.name}

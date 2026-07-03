@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useModalA11y } from '../../hooks/useModalA11y'
 import { parseProjectFromText } from '../../lib/anthropic'
 import { useProperties } from '../../hooks/useProperties'
 import NewProjectModal from './NewProjectModal'
@@ -10,6 +11,7 @@ export default function AIAddModal({ open, onClose, onCreate }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [parsed, setParsed] = useState(null)
+  const panelRef = useModalA11y(open && !parsed)
 
   async function handleParse() {
     if (!text.trim()) return
@@ -72,9 +74,12 @@ export default function AIAddModal({ open, onClose, onCreate }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.16 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="AI quick add"
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
-            <div className="bg-bg-surface border border-border rounded-2xl w-full max-w-md shadow-2xl pointer-events-auto">
+            <div ref={panelRef} className="bg-bg-surface border border-border rounded-2xl w-full max-w-md shadow-2xl pointer-events-auto">
               <div className="px-6 py-5 border-b border-border flex items-start justify-between">
                 <div>
                   <h2 className="font-display text-base font-bold text-text-primary">AI Add</h2>

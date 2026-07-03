@@ -146,6 +146,22 @@ export function useDeleteProject() {
   })
 }
 
+// Cross-project activity feed for the dashboard
+export function useRecentActivity(limit = 10) {
+  return useQuery({
+    queryKey: ['recent_activity', limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('activity_log')
+        .select('id, action, detail, created_at, projects(id, title)')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return data
+    },
+  })
+}
+
 // ── Project Tags ──────────────────────────────────────────────────────────────
 
 export function useUpdateProjectTags() {

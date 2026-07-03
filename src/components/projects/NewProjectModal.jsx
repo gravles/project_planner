@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useModalA11y } from '../../hooks/useModalA11y'
 import { useProperties } from '../../hooks/useProperties'
 import { useRoomTypes, useCreateRoomType } from '../../hooks/useAdmin'
 import { useVendors, useCreateVendor } from '../../hooks/useVendors'
@@ -31,6 +32,7 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
   const [tagIds, setTagIds] = useState([])
   const [newSubtask, setNewSubtask] = useState('')
   const [saving, setSaving] = useState(false)
+  const panelRef = useModalA11y(open)
 
   function set(key, value) {
     setForm(f => ({ ...f, [key]: value }))
@@ -110,9 +112,12 @@ export default function NewProjectModal({ open, onClose, onCreate, initialData =
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.16 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="New project"
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pointer-events-none"
           >
-            <div className="bg-bg-surface sm:border border-border sm:rounded-2xl w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
+            <div ref={panelRef} className="bg-bg-surface sm:border border-border sm:rounded-2xl w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
               <div className="px-6 py-5 border-b border-border flex items-center justify-between sticky top-0 bg-bg-surface z-10">
                 <h2 className="font-display text-base font-bold text-text-primary">
                   {initialData ? 'Review AI Project' : 'New Project'}

@@ -5,6 +5,7 @@ import { useUIStore } from '../../stores/uiStore'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import FilterBar from './FilterBar'
+import MobileTabBar from './MobileTabBar'
 import NewProjectModal from '../projects/NewProjectModal'
 import AIAddModal from '../projects/AIAddModal'
 import ShortcutsModal from '../ui/ShortcutsModal'
@@ -13,10 +14,11 @@ import { useCreateProject } from '../../hooks/useProjects'
 
 export default function AppShell({ children, projectPage = false }) {
   const navigate = useNavigate()
-  const { sidebarOpen, toggleSidebar, setViewMode, detailProjectId, closeDetail } = useUIStore()
+  const {
+    sidebarOpen, toggleSidebar, setViewMode, detailProjectId, closeDetail,
+    newProjectOpen, setNewProjectOpen, aiAddOpen, setAiAddOpen,
+  } = useUIStore()
   const createProject = useCreateProject()
-  const [newOpen, setNewOpen] = useState(false)
-  const [aiOpen, setAiOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   async function handleCreate(data) {
@@ -24,8 +26,8 @@ export default function AppShell({ children, projectPage = false }) {
   }
 
   // ── Global keyboard shortcuts (inactive while typing in a field) ──────────
-  useHotkeys('n', () => setNewOpen(true), { preventDefault: true })
-  useHotkeys('a', () => setAiOpen(true), { preventDefault: true })
+  useHotkeys('n', () => setNewProjectOpen(true), { preventDefault: true })
+  useHotkeys('a', () => setAiAddOpen(true), { preventDefault: true })
   useHotkeys('b', () => { setViewMode('board'); navigate('/') })
   useHotkeys('l', () => { setViewMode('list'); navigate('/') })
   useHotkeys('c', () => { setViewMode('calendar'); navigate('/') })
@@ -33,8 +35,8 @@ export default function AppShell({ children, projectPage = false }) {
   useHotkeys('shift+slash', () => setShortcutsOpen(o => !o))
   useHotkeys('escape', () => {
     if (shortcutsOpen) setShortcutsOpen(false)
-    else if (newOpen) setNewOpen(false)
-    else if (aiOpen) setAiOpen(false)
+    else if (newProjectOpen) setNewProjectOpen(false)
+    else if (aiAddOpen) setAiAddOpen(false)
     else if (detailProjectId) closeDetail()
   }, { enableOnFormTags: true })
 
@@ -54,30 +56,33 @@ export default function AppShell({ children, projectPage = false }) {
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar
           projectPage={projectPage}
-          onNewProject={() => setNewOpen(true)}
-          onAIAdd={() => setAiOpen(true)}
+          onNewProject={() => setNewProjectOpen(true)}
+          onAIAdd={() => setAiAddOpen(true)}
         />
         {projectPage && <FilterBar />}
 
-        <main className="flex-1 overflow-hidden flex flex-col">
+        {/* pb keeps content clear of the mobile tab bar */}
+        <main className="flex-1 overflow-hidden flex flex-col pb-14 sm:pb-0">
           {children}
         </main>
       </div>
 
+      <MobileTabBar />
+
       <NewProjectModal
-        open={newOpen}
-        onClose={() => setNewOpen(false)}
+        open={newProjectOpen}
+        onClose={() => setNewProjectOpen(false)}
         onCreate={handleCreate}
       />
       <AIAddModal
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
+        open={aiAddOpen}
+        onClose={() => setAiAddOpen(false)}
         onCreate={handleCreate}
       />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <CommandPalette
-        onNewProject={() => setNewOpen(true)}
-        onAIAdd={() => setAiOpen(true)}
+        onNewProject={() => setNewProjectOpen(true)}
+        onAIAdd={() => setAiAddOpen(true)}
       />
     </div>
   )

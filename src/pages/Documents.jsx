@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AppShell from '../components/layout/AppShell'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { useDocuments, useCreateDocument, useDeleteDocument } from '../hooks/useDocuments'
 import { useProperties } from '../hooks/useProperties'
 import { useProjects } from '../hooks/useProjects'
@@ -32,6 +33,7 @@ function fileToBase64(file) {
 }
 
 function UploadModal({ open, onClose, file, prefill, parsing, properties, projects, onSave }) {
+  const panelRef = useModalA11y(open)
   const [form, setForm] = useState({ title: '', doc_type: 'other', expires_on: '', vendor: '', notes: '', property_id: '', project_id: '' })
   const [prevPrefill, setPrevPrefill] = useState(prefill)
   if (prevPrefill !== prefill) {
@@ -79,7 +81,7 @@ function UploadModal({ open, onClose, file, prefill, parsing, properties, projec
             role="dialog" aria-label="Save document"
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pointer-events-none"
           >
-            <div className="bg-bg-surface sm:border border-border sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
+            <div ref={panelRef} className="bg-bg-surface sm:border border-border sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto scrollbar-thin">
               <div className="px-6 py-5 border-b border-border sticky top-0 bg-bg-surface z-10">
                 <h2 className="font-display text-base font-bold text-text-primary">Save Document</h2>
                 <p className="text-xs text-text-muted mt-1 truncate">

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useProjectPhotos, useUploadPhoto, useDeletePhoto } from '../../hooks/usePhotos'
 import { getRoomRecommendations, compareBeforeAfter } from '../../lib/anthropic'
+import BeforeAfterSlider from './BeforeAfterSlider'
 import { cn } from '../../lib/utils'
 
 const TABS = ['before', 'progress', 'after']
@@ -201,10 +202,20 @@ function BeforeAfterCompare({ project, beforePhotos, afterPhotos }) {
         </div>
       </div>
 
+      {/* Visual slider for the selected pair */}
+      {beforePhotos[beforeIdx]?.url && afterPhotos[afterIdx]?.url && (
+        <div className="mb-3">
+          <BeforeAfterSlider
+            beforeUrl={beforePhotos[beforeIdx].url}
+            afterUrl={afterPhotos[afterIdx].url}
+          />
+        </div>
+      )}
+
       {error && <p className="text-xs text-red-400">{error}</p>}
 
       {!result && !loading && !error && (
-        <p className="text-xs text-text-muted">Select one photo from each side then hit Compare.</p>
+        <p className="text-xs text-text-muted">Drag the divider to compare, or hit Compare for an AI assessment.</p>
       )}
 
       {result && (

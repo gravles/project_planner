@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export const useUIStore = create(persist((set) => ({
-  // Sidebar
-  sidebarOpen: true,
+  // Sidebar — closed by default on phones (the bottom tab bar covers nav)
+  sidebarOpen: typeof window === 'undefined' || window.innerWidth >= 640,
   toggleSidebar: () => set(s => ({ sidebarOpen: !s.sidebarOpen })),
 
   // View mode: 'board' | 'list' | 'calendar'
@@ -18,6 +18,12 @@ export const useUIStore = create(persist((set) => ({
   detailProjectId: null,
   openDetail: (id) => set({ detailProjectId: id }),
   closeDetail: () => set({ detailProjectId: null }),
+
+  // Global modals (owned by AppShell, openable from anywhere)
+  newProjectOpen: false,
+  setNewProjectOpen: (newProjectOpen) => set({ newProjectOpen }),
+  aiAddOpen: false,
+  setAiAddOpen: (aiAddOpen) => set({ aiAddOpen }),
 
   // Search query
   searchQuery: '',

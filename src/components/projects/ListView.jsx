@@ -141,6 +141,7 @@ export default function ListView({ projects, onOpen }) {
                   <div className="flex items-center gap-2.5 min-w-0">
                     {project.properties && (
                       <span
+                        title={project.properties.name}
                         className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: project.properties.color }}
                       />
@@ -155,10 +156,21 @@ export default function ListView({ projects, onOpen }) {
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3" onClick={() => onOpen(project.id)}>
-                  <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', STATUS_COLORS[project.status])}>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      const cycle = ['Backlog', 'In Progress', 'Done']
+                      const next = project.status === 'Blocked'
+                        ? 'In Progress'
+                        : cycle[(cycle.indexOf(project.status) + 1) % cycle.length]
+                      updateProject.mutate({ id: project.id, status: next })
+                    }}
+                    title="Click to cycle status (Backlog → In Progress → Done)"
+                    className={cn('text-xs font-medium px-2 py-0.5 rounded-full hover:ring-1 hover:ring-current transition-shadow', STATUS_COLORS[project.status])}
+                  >
                     {project.status}
-                  </span>
+                  </button>
                 </td>
                 <td className="px-4 py-3" onClick={() => onOpen(project.id)}>
                   <span className={cn('text-xs font-semibold', PRIORITY_COLORS[project.priority])}>

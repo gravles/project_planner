@@ -1,6 +1,6 @@
 import { cn, formatDate, isOverdue, PRIORITY_COLORS } from '../../lib/utils'
 
-export default function ProjectCard({ project, onOpen, isDragging = false }) {
+export default function ProjectCard({ project, onOpen, onUpdateStatus, isDragging = false }) {
   const tags = project.project_tags?.map(pt => pt.tags).filter(Boolean) ?? []
   const subtaskTotal = project.subtasks?.length ?? 0
   const subtaskDone = project.subtasks?.filter(s => s.done).length ?? 0
@@ -9,25 +9,43 @@ export default function ProjectCard({ project, onOpen, isDragging = false }) {
   const overdue = isOverdue(project.due_date) && project.status !== 'Done'
   const overBudget = estimate > 0 && spent > estimate
   const budgetPct = estimate > 0 ? Math.min(100, (spent / estimate) * 100) : 0
+  const isDone = project.status === 'Done'
 
   return (
     <div
       onClick={onOpen}
       className={cn(
-        'bg-bg-elevated border border-border rounded-xl p-3.5 cursor-pointer hover:border-border-hover transition-all select-none',
+        'group/card bg-bg-elevated border border-border rounded-xl p-3.5 cursor-pointer hover:border-border-hover transition-all select-none',
         isDragging && 'opacity-0 pointer-events-none',
       )}
     >
       {/* Title row */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-start gap-2 min-w-0">
+          {onUpdateStatus && (
+            <button
+              onClick={e => { e.stopPropagation(); onUpdateStatus(project.id, isDone ? 'In Progress' : 'Done') }}
+              onPointerDown={e => e.stopPropagation()}
+              title={isDone ? 'Reopen (back to In Progress)' : 'Mark done'}
+              aria-label={isDone ? 'Reopen project' : 'Mark project done'}
+              className={cn(
+                'shrink-0 w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center text-[9px] leading-none transition-all',
+                isDone
+                  ? 'bg-success/20 border-success/50 text-success'
+                  : 'border-border-hover text-transparent hover:border-success hover:text-success sm:opacity-0 sm:group-hover/card:opacity-100',
+              )}
+            >
+              ✓
+            </button>
+          )}
           {project.properties && (
             <span
-              className="w-2 h-2 rounded-full shrink-0 mt-0.5"
+              title={project.properties.name}
+              className="w-2 h-2 rounded-full shrink-0 mt-1.5"
               style={{ backgroundColor: project.properties.color }}
             />
           )}
-          <span className="text-sm font-medium text-text-primary leading-snug line-clamp-2">
+          <span className={cn('text-sm font-medium leading-snug line-clamp-2', isDone ? 'text-text-muted line-through' : 'text-text-primary')}>
             {project.title}
           </span>
         </div>

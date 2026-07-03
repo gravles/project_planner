@@ -16,7 +16,10 @@ export default {
         text: {
           primary: '#f9fafb',
           secondary: '#9ca3af',
-          muted: '#4b5563',
+          // #6b7280 ≈ 4.6:1 on the base background (old #4b5563 was ~3.2:1
+          // and failed WCAG AA); use `faint` only for purely decorative text.
+          muted: '#6b7280',
+          faint: '#4b5563',
         },
         accent: '#f59e0b',
         success: '#22c55e',

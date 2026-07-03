@@ -82,7 +82,7 @@ export default function QuickSpendFAB() {
       {/* FAB — mobile only */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 sm:hidden w-14 h-14 bg-accent text-bg-base rounded-full shadow-xl flex items-center justify-center active:scale-95 transition-transform"
+        className="fixed bottom-20 right-4 z-40 sm:hidden w-14 h-14 bg-accent text-bg-base rounded-full shadow-xl flex items-center justify-center active:scale-95 transition-transform"
         aria-label="Log spend"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

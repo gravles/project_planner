@@ -166,6 +166,7 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
   const addShoppingItems = useAddShoppingItems()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const subtaskInputRef = useRef(null)
+  const [tab, setTab] = useState('overview')
 
   function save(field, value) {
     updateProject.mutate({ id: projectId, [field]: value || null })
@@ -371,11 +372,42 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
+
+              {/* ── Tabs ── */}
+              <div role="tablist" aria-label="Project sections" className="flex gap-1 mt-4 -mb-4 border-b border-transparent">
+                {[
+                  { key: 'overview', label: 'Overview', badge: subtaskTotal > 0 ? `${subtaskDone}/${subtaskTotal}` : null },
+                  { key: 'money', label: 'Money', badge: spent > 0 ? `$${Math.round(spent).toLocaleString()}` : null },
+                  { key: 'photos', label: 'Photos', badge: project.project_photos?.length || null },
+                  { key: 'activity', label: 'Activity', badge: null },
+                ].map(t => (
+                  <button
+                    key={t.key}
+                    role="tab"
+                    aria-selected={tab === t.key}
+                    onClick={() => setTab(t.key)}
+                    className={cn(
+                      'px-2.5 py-2 text-xs font-semibold rounded-t-lg border-b-2 transition-colors flex items-center gap-1.5',
+                      tab === t.key
+                        ? 'text-accent border-accent'
+                        : 'text-text-muted border-transparent hover:text-text-secondary',
+                    )}
+                  >
+                    {t.label}
+                    {t.badge != null && (
+                      <span className={cn('text-[10px] font-medium', tab === t.key ? 'text-accent/70' : 'text-text-faint')}>
+                        {t.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* ── Scrollable body ── */}
             <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4 space-y-5">
 
+              {tab === 'overview' && (<>
               {/* Details grid */}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Room">
@@ -445,7 +477,9 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   onChange={ids => updateProjectTags.mutate({ projectId, tagIds: ids })}
                 />
               </Field>
+              </>)}
 
+              {tab === 'money' && (<>
               {/* ── AI Estimators ── */}
               <AiBudgetEstimator projectId={projectId} projectTitle={project.title} />
               <AiTimeEstimator projectId={projectId} projectTitle={project.title} />
@@ -487,7 +521,9 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   )}
                 </div>
               )}
+              </>)}
 
+              {tab === 'overview' && (<>
               {/* ── Subtasks ── */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -563,7 +599,9 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   </button>
                 </form>
               </div>
+              </>)}
 
+              {tab === 'money' && (<>
               {/* ── Spend Log ── */}
               <div>
                 {/* Hidden file input — opens camera on mobile */}
@@ -815,7 +853,9 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   })}
                 </div>
               </div>
+              </>)}
 
+              {tab === 'photos' && (<>
               {/* ── Photos ── */}
               <div>
                 <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">Photos</p>
@@ -827,7 +867,9 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
 
               {/* ── Linked vault documents ── */}
               <ProjectDocuments projectId={projectId} />
+              </>)}
 
+              {tab === 'overview' && (<>
               {/* ── AI Suggestions ── */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -932,13 +974,15 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   </div>
                 )}
               </div>
+              </>)}
 
+              {tab === 'activity' && (<>
               {/* ── Activity Log ── */}
               {project.activity_log?.length > 0 && (
                 <div>
                   <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Activity</p>
                   <div className="space-y-2">
-                    {project.activity_log.slice(0, 10).map(entry => (
+                    {project.activity_log.slice(0, 25).map(entry => (
                       <div key={entry.id} className="flex items-start gap-2.5 text-xs text-text-muted">
                         <span className="w-1.5 h-1.5 rounded-full bg-text-muted shrink-0 mt-1.5" />
                         <span className="flex-1">
@@ -1029,6 +1073,7 @@ export default function ProjectDetail({ projectId, onClose, forceOverlay = false
                   </button>
                 )}
               </div>
+              </>)}
             </div>
           </>
         )}

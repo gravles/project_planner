@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useModalA11y } from '../../hooks/useModalA11y'
 
 const SHORTCUTS = [
   { keys: ['N'], label: 'New project' },
@@ -14,6 +15,7 @@ const SHORTCUTS = [
 ]
 
 export default function ShortcutsModal({ open, onClose }) {
+  const panelRef = useModalA11y(open)
   return (
     <AnimatePresence>
       {open && (
@@ -32,7 +34,7 @@ export default function ShortcutsModal({ open, onClose }) {
             aria-label="Keyboard shortcuts"
             className="fixed inset-0 z-[95] flex items-center justify-center p-4 pointer-events-none"
           >
-            <div className="bg-bg-surface border border-border rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto">
+            <div ref={panelRef} className="bg-bg-surface border border-border rounded-2xl w-full max-w-sm shadow-2xl pointer-events-auto">
               <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                 <h2 className="font-display text-sm font-bold text-text-primary">Keyboard shortcuts</h2>
                 <button onClick={onClose} className="text-text-muted hover:text-text-primary transition-colors text-xs p-1">✕</button>

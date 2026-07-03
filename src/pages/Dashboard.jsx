@@ -1,25 +1,33 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { isAfter, parseISO, startOfDay } from 'date-fns'
+import { isAfter, parseISO, startOfDay, addDays, format } from 'date-fns'
 import AppShell from '../components/layout/AppShell'
 import ProjectDetail from '../components/projects/ProjectDetail'
-import { useProjects } from '../hooks/useProjects'
+import { useProjects, useRecentActivity } from '../hooks/useProjects'
 import { useProperties } from '../hooks/useProperties'
 import { generateWeeklySummary } from '../lib/anthropic'
 import { useUIStore } from '../stores/uiStore'
 import { DashboardSkeleton } from '../components/ui/Skeleton'
-import { cn, STATUS_COLORS, PROPERTY_COLORS, formatDate } from '../lib/utils'
+import { cn, STATUS_COLORS, PROPERTY_COLORS, formatDate, timeAgo } from '../lib/utils'
 
-function StatCard({ label, value, sub, accent = false }) {
+function StatCard({ label, value, sub, accent = false, onClick }) {
+  const Tag = onClick ? 'button' : 'div'
   return (
-    <div className="bg-bg-surface border border-border rounded-2xl px-5 py-4">
+    <Tag
+      onClick={onClick}
+      className={cn(
+        'bg-bg-surface border border-border rounded-2xl px-5 py-4 text-left',
+        onClick && 'hover:border-border-hover cursor-pointer transition-colors',
+      )}
+    >
       <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1.5">{label}</p>
       <p className={cn('text-3xl font-bold font-display', accent ? 'text-accent' : 'text-text-primary')}>
         {value}
       </p>
       {sub && <p className="text-xs text-text-muted mt-1">{sub}</p>}
-    </div>
+    </Tag>
   )
 }
 
@@ -40,11 +48,21 @@ const CUSTOM_TOOLTIP = ({ active, payload, label }) => {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const { data: projects = [], isLoading } = useProjects()
   const { data: properties = [] } = useProperties()
-  const { detailProjectId, openDetail, closeDetail } = useUIStore()
+  const { data: recentActivity = [] } = useRecentActivity(10)
+  const { detailProjectId, openDetail, closeDetail, clearFilters, setFilters, setFilterOverdue, setActiveProperty } = useUIStore()
   const [summary, setSummary] = useState(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
+
+  // Deep-link into a pre-filtered board view
+  function goFiltered(setup) {
+    clearFilters()
+    setActiveProperty(null)
+    setup?.()
+    navigate('/')
+  }
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const total = projects.length
@@ -70,11 +88,25 @@ export default function Dashboard() {
     }
   })
 
-  // ── Overdue ────────────────────────────────────────────────────────────────
+  // ── Overdue / upcoming / attention items ──────────────────────────────────
   const today = startOfDay(new Date())
   const overdueProjects = projects.filter(p =>
     p.due_date && p.status !== 'Done' && isAfter(today, parseISO(p.due_date))
   ).sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+
+  const weekAhead = addDays(today, 7)
+  const monthAhead = addDays(today, 30)
+  const notDoneWithDue = projects.filter(p => p.due_date && p.status !== 'Done' && !isAfter(today, parseISO(p.due_date)))
+  const dueThisWeek = notDoneWithDue
+    .filter(p => !isAfter(parseISO(p.due_date), weekAhead))
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))
+  const upcoming = notDoneWithDue
+    .filter(p => !isAfter(parseISO(p.due_date), monthAhead))
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))
+
+  const maintenanceOpen = projects.filter(p => p.maintenance_plan_id && p.status !== 'Done').length
+  const unclassifiedSpend = projects.reduce(
+    (n, p) => n + (p.spend_entries?.filter(e => !e.expense_type).length ?? 0), 0)
 
   // ── Status breakdown ───────────────────────────────────────────────────────
   const statusData = ['Backlog', 'In Progress', 'Blocked', 'Done'].map(s => ({
@@ -117,6 +149,64 @@ export default function Dashboard() {
     <AppShell>
       <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-5xl space-y-4 sm:space-y-6 overflow-y-auto flex-1 scrollbar-thin">
 
+        {/* ── Today: what needs attention, one click from action ── */}
+        {(dueThisWeek.length > 0 || overdueProjects.length > 0 || maintenanceOpen > 0 || unclassifiedSpend > 0) && (
+          <div className="bg-bg-surface border border-border rounded-2xl px-5 py-4">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Today</p>
+            <div className="flex flex-wrap gap-2">
+              {overdueProjects.length > 0 && (
+                <button
+                  onClick={() => goFiltered(() => setFilterOverdue(true))}
+                  className="text-xs px-2.5 py-1.5 rounded-lg bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20 transition-colors"
+                >
+                  ⚠ {overdueProjects.length} overdue
+                </button>
+              )}
+              {dueThisWeek.length > 0 && (
+                <span className="text-xs px-2.5 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-accent">
+                  {dueThisWeek.length} due this week
+                </span>
+              )}
+              {maintenanceOpen > 0 && (
+                <button
+                  onClick={() => navigate('/maintenance')}
+                  className="text-xs px-2.5 py-1.5 rounded-lg bg-info/10 border border-info/30 text-info hover:bg-info/20 transition-colors"
+                >
+                  ↻ {maintenanceOpen} maintenance open
+                </button>
+              )}
+              {unclassifiedSpend > 0 && (
+                <button
+                  onClick={() => navigate('/reports')}
+                  className="text-xs px-2.5 py-1.5 rounded-lg bg-bg-elevated border border-border text-text-secondary hover:text-text-primary transition-colors"
+                  title="Spend entries not yet classified capital vs current for tax purposes"
+                >
+                  {unclassifiedSpend} spend {unclassifiedSpend === 1 ? 'entry' : 'entries'} unclassified
+                </button>
+              )}
+            </div>
+            {dueThisWeek.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {dueThisWeek.slice(0, 4).map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => openDetail(p.id)}
+                    className="w-full flex items-center justify-between gap-3 text-left hover:opacity-80 transition-opacity"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      {p.properties?.color && (
+                        <span title={p.properties.name} className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.properties.color }} />
+                      )}
+                      <span className="text-sm text-text-primary truncate">{p.title}</span>
+                    </span>
+                    <span className="text-xs text-text-muted shrink-0">{format(parseISO(p.due_date), 'EEE MMM d')}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Overdue alert ── */}
         {overdueProjects.length > 0 && (
           <div className="bg-danger/10 border border-danger/30 rounded-2xl px-5 py-4">
@@ -152,15 +242,21 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── Stats row ── */}
+        {/* ── Stats row (each deep-links to a filtered view) ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Total Projects" value={total} />
-          <StatCard label="In Progress" value={inProgress} accent />
-          <StatCard label="Blocked" value={blocked} sub={blocked > 0 ? 'needs attention' : 'all clear'} />
+          <StatCard label="Total Projects" value={total} onClick={() => goFiltered()} />
+          <StatCard label="In Progress" value={inProgress} accent onClick={() => goFiltered(() => setFilters({ statuses: ['In Progress'] }))} />
+          <StatCard
+            label="Blocked"
+            value={blocked}
+            sub={blocked > 0 ? 'needs attention' : 'all clear'}
+            onClick={() => goFiltered(() => setFilters({ statuses: ['Blocked'] }))}
+          />
           <StatCard
             label="Budget"
             value={`$${totalBudget.toLocaleString()}`}
             sub={totalSpent > 0 ? `$${totalSpent.toLocaleString()} spent` : 'no spend recorded'}
+            onClick={() => navigate('/reports')}
           />
         </div>
 
@@ -217,6 +313,64 @@ export default function Dashboard() {
               <p className="text-xs text-text-muted">
                 {Math.round((done / total) * 100)}% complete
               </p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Upcoming + Activity ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-bg-surface border border-border rounded-2xl px-5 py-4">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Next 30 Days</p>
+            {upcoming.length === 0 ? (
+              <p className="text-sm text-text-muted">Nothing due in the next month.</p>
+            ) : (
+              <div className="space-y-2">
+                {upcoming.slice(0, 8).map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => openDetail(p.id)}
+                    className="w-full flex items-center justify-between gap-3 text-left hover:opacity-80 transition-opacity"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      {p.properties?.color && (
+                        <span title={p.properties.name} className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.properties.color }} />
+                      )}
+                      <span className="text-sm text-text-primary truncate">{p.title}</span>
+                      {p.maintenance_plan_id && <span className="text-[10px] text-info shrink-0">↻</span>}
+                    </span>
+                    <span className="text-xs text-text-muted shrink-0">{formatDate(p.due_date)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-bg-surface border border-border rounded-2xl px-5 py-4">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Recent Activity</p>
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-text-muted">No activity yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {recentActivity.map(entry => (
+                  <button
+                    key={entry.id}
+                    onClick={() => entry.projects?.id && openDetail(entry.projects.id)}
+                    className="w-full flex items-start gap-2.5 text-left hover:opacity-80 transition-opacity"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted shrink-0 mt-1.5" />
+                    <span className="flex-1 text-xs text-text-secondary min-w-0">
+                      <span className="text-text-primary">{entry.projects?.title ?? 'Deleted project'}</span>
+                      {' — '}
+                      {entry.action === 'status_changed'
+                        ? `${entry.detail?.from} → ${entry.detail?.to}`
+                        : entry.action === 'spend_added'
+                        ? `spend $${Number(entry.detail?.amount).toLocaleString()}${entry.detail?.note ? ` (${entry.detail.note})` : ''}`
+                        : entry.action.replaceAll('_', ' ')}
+                    </span>
+                    <span className="shrink-0 text-[11px] text-text-faint">{timeAgo(entry.created_at)}</span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </div>

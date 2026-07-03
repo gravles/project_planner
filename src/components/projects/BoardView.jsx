@@ -9,6 +9,9 @@ import {
   useDroppable,
 } from '@dnd-kit/core'
 import { STATUS_OPTIONS, STATUS_COLORS, cn } from '../../lib/utils'
+import { useCreateProject } from '../../hooks/useProjects'
+import { useProperties } from '../../hooks/useProperties'
+import { useUIStore } from '../../stores/uiStore'
 import ProjectCard from './ProjectCard'
 
 function DroppableColumn({ status, children, count, totalEstimate }) {
@@ -35,6 +38,101 @@ function DroppableColumn({ status, children, count, totalEstimate }) {
       >
         {children}
       </div>
+    </div>
+  )
+}
+
+// Ghost row at the bottom of each column: type a title, Enter creates the
+// project in that column with the active property filter applied.
+function AddCardRow({ status }) {
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState('')
+  const createProject = useCreateProject()
+  const { data: properties = [] } = useProperties()
+  const { activeProperty } = useUIStore()
+
+  async function submit() {
+    const trimmed = title.trim()
+    if (!trimmed) { setEditing(false); return }
+    const property = activeProperty ? properties.find(p => p.name === activeProperty) : null
+    await createProject.mutateAsync({
+      project: {
+        title: trimmed,
+        status,
+        property_id: property?.id ?? null,
+        room: 'Other',
+        priority: 'Medium',
+        estimate_cad: 0,
+      },
+    })
+    setTitle('') // stay open for rapid entry
+  }
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="w-full text-left px-3 py-2 rounded-xl text-sm text-text-muted hover:text-text-secondary hover:bg-bg-elevated/60 transition-colors"
+      >
+        + Add
+      </button>
+    )
+  }
+
+  return (
+    <input
+      autoFocus
+      value={title}
+      onChange={e => setTitle(e.target.value)}
+      onKeyDown={e => {
+        if (e.key === 'Enter') { e.preventDefault(); submit() }
+        if (e.key === 'Escape') { setTitle(''); setEditing(false) }
+      }}
+      onBlur={() => { if (!title.trim()) setEditing(false) }}
+      placeholder={`New ${status.toLowerCase()} project…`}
+      disabled={createProject.isPending}
+      className="w-full bg-bg-elevated border border-accent/40 rounded-xl px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-60"
+    />
+  )
+}
+
+function EmptyBoard() {
+  const { searchQuery, activeFilters, clearFilters, activeProperty, setNewProjectOpen } = useUIStore()
+  const hasFilters = !!searchQuery
+    || activeFilters.statuses.length > 0
+    || activeFilters.priorities.length > 0
+    || activeFilters.tagIds.length > 0
+    || activeFilters.overdue
+    || activeFilters.hideDone
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16">
+      <p className="text-3xl mb-3">{hasFilters ? '🔍' : '🛠️'}</p>
+      {hasFilters ? (
+        <>
+          <p className="text-sm text-text-secondary">No projects match your filters{activeProperty ? ` on ${activeProperty}` : ''}.</p>
+          <button
+            onClick={clearFilters}
+            className="mt-3 px-3 py-1.5 rounded-lg text-sm font-semibold bg-bg-elevated border border-border text-text-secondary hover:text-text-primary hover:border-border-hover transition-colors"
+          >
+            Clear filters
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-text-secondary">No projects yet{activeProperty ? ` for ${activeProperty}` : ''}.</p>
+          <p className="text-xs text-text-muted mt-1">
+            Press <kbd className="font-mono bg-bg-elevated px-1 py-0.5 rounded border border-border">N</kbd> for a new
+            project or <kbd className="font-mono bg-bg-elevated px-1 py-0.5 rounded border border-border">A</kbd> to describe one to AI.
+          </p>
+          <button
+            onClick={() => setNewProjectOpen(true)}
+            className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold bg-accent hover:bg-amber-400 text-bg-base transition-colors"
+          >
+            + New Project
+          </button>
+        </>
+      )}
     </div>
   )
 }
@@ -104,13 +202,13 @@ function SwipeableCard({ project, onOpen, onUpdateStatus }) {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <ProjectCard project={project} onOpen={onOpen} />
+        <ProjectCard project={project} onOpen={onOpen} onUpdateStatus={onUpdateStatus} />
       </div>
     </div>
   )
 }
 
-function DraggableCard({ project, onOpen }) {
+function DraggableCard({ project, onOpen, onUpdateStatus }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
     data: { status: project.status },
@@ -122,7 +220,7 @@ function DraggableCard({ project, onOpen }) {
 
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <ProjectCard project={project} onOpen={onOpen} isDragging={isDragging} />
+      <ProjectCard project={project} onOpen={onOpen} onUpdateStatus={onUpdateStatus} isDragging={isDragging} />
     </div>
   )
 }
@@ -149,6 +247,10 @@ export default function BoardView({ projects, onOpen, onUpdateStatus }) {
     if (project && project.status !== newStatus && STATUS_OPTIONS.includes(newStatus)) {
       onUpdateStatus(active.id, newStatus)
     }
+  }
+
+  if (projects.length === 0) {
+    return <EmptyBoard />
   }
 
   return (
@@ -205,8 +307,10 @@ export default function BoardView({ projects, onOpen, onUpdateStatus }) {
                     key={project.id}
                     project={project}
                     onOpen={() => onOpen(project.id)}
+                    onUpdateStatus={onUpdateStatus}
                   />
                 ))}
+                <AddCardRow status={status} />
               </DroppableColumn>
             )
           })}
