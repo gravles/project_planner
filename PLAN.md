@@ -1,5 +1,15 @@
 # Project Planner — Improvement & Feature Plan
 
+> **STATUS (2026-07-03): all phases implemented** on branch `claude/wizardly-lamarr-5c47a2`
+> (commits `920bd4a` → `1fdd626`). Database migrations 007 and 009–014 are already applied
+> to the live Supabase project. Remaining manual steps before/after merging to `main`:
+> 1. Supabase Dashboard → Authentication → disable "Allow new users to sign up" (0.1).
+> 2. Vercel env vars: add `MCP_AUTHORIZE_PASSWORD`, `CRON_SECRET`, `RESEND_API_KEY`,
+>    `DIGEST_TO_EMAIL` (and optionally `EMAIL_FROM` for a verified Resend domain).
+> 3. Merge → deploy → **then** apply `008_private_bucket.sql` (see note in that file).
+> Implementation deviations from the plan are noted in the commit messages (e.g. migration
+> numbering shifted by one: 011 = notification_log, 012 = documents).
+
 **Audience:** an implementing AI agent (or developer) working phase by phase.
 **Scope decision (July 2026):** this remains a **personal tool for one user (Nathan)**. Do NOT build
 multi-tenancy, organizations, RBAC, SSO, or billing. The goals are: (1) close the security holes that
